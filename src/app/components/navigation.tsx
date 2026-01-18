@@ -1,4 +1,4 @@
-import { Disc, User, LogOut, ChevronDown, Settings, History, LifeBuoy, Search, X } from 'lucide-react'; 
+import { Disc, User, LogOut, ChevronDown, Settings, History, LifeBuoy, Search } from 'lucide-react'; 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabase';
@@ -17,8 +17,8 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
     }
   };
 
-  const handleSearchSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  // Función única para disparar la búsqueda
+  const triggerSearch = () => {
     onSearch(searchTerm);
   };
 
@@ -33,7 +33,7 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
     <nav className="fixed top-0 left-0 right-0 z-[60] bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 h-20">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
         
-        {/* IZQUIERDA: Logo + Enlaces */}
+        {/* IZQUIERDA: Logo */}
         <div className="flex items-center gap-10">
           <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="bg-[#ff0055] p-1.5 rounded-lg shadow-[0_0_15px_rgba(255,0,85,0.4)]">
@@ -46,37 +46,31 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
           
           <div className="hidden lg:flex items-center gap-8">
             {links.map(l => (
-              <a 
-                key={l.name} 
-                href={l.href} 
-                className="text-xs font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-all duration-300 hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
-              >
+              <a key={l.name} href={l.href} className="text-xs font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-all duration-300">
                 {l.name}
               </a>
             ))}
           </div>
         </div>
 
-        {/* DERECHA: Buscador + Menú Usuario */}
+        {/* DERECHA: Buscador con Acción Manual + Menú Usuario */}
         <div className="flex items-center gap-6">
           
-          {/* BARRA DE BÚSQUEDA ANIMADA */}
-          <div className="relative flex items-center">
+          <div 
+            className="relative flex items-center"
+            onMouseEnter={() => setIsSearchOpen(true)}
+            onMouseLeave={() => { if (searchTerm === '') setIsSearchOpen(false); }}
+          >
             <motion.div 
               initial={false}
               animate={{ width: isSearchOpen ? 240 : 40 }}
               className={`flex items-center h-10 rounded-xl border transition-colors duration-300 ${
-                isSearchOpen ? 'bg-white/5 border-white/20' : 'bg-transparent border-transparent hover:bg-white/5'
+                isSearchOpen ? 'bg-white/5 border-white/20' : 'bg-transparent border-transparent'
               }`}
             >
+              {/* Clic en la lupa dispara la búsqueda */}
               <button 
-                onClick={() => {
-                  if (isSearchOpen && searchTerm) {
-                    handleSearchSubmit();
-                  } else {
-                    setIsSearchOpen(!isSearchOpen);
-                  }
-                }}
+                onClick={triggerSearch}
                 className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white transition-colors"
               >
                 <Search size={18} />
@@ -90,12 +84,11 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
                     exit={{ opacity: 0 }}
                     autoFocus
                     type="text"
-                    placeholder="Search tracks, artists..."
-                    // EDITADO: Añadido focus:ring-0 y focus:outline-none para quitar el cuadrado blanco
+                    placeholder="Press Enter to search..."
                     className="bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[11px] font-bold text-white uppercase tracking-wider w-full pr-4 shadow-none"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
+                    onKeyDown={(e) => e.key === 'Enter' && triggerSearch()}
                   />
                 )}
               </AnimatePresence>
@@ -107,9 +100,7 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
               <button 
                 onClick={() => setUserMenuOpen(!userMenuOpen)} 
                 className={`flex items-center gap-3 px-5 py-2.5 rounded-xl border transition-all duration-300 ${
-                  userMenuOpen 
-                    ? 'bg-white/10 border-white/20' 
-                    : 'bg-[#0a0a0a] border-white/10 hover:border-[#ff0055]/50'
+                  userMenuOpen ? 'bg-white/10 border-white/20' : 'bg-[#0a0a0a] border-white/10 hover:border-[#ff0055]/50'
                 }`}
               >
                 <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#ff0055] to-purple-600 flex items-center justify-center">
@@ -135,7 +126,6 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
                          <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Signed in as</p>
                          <p className="text-xs font-bold text-white truncate">{user.email}</p>
                       </div>
-
                       <div className="space-y-1">
                         <button className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all uppercase tracking-widest">
                           <History size={14} /> History
@@ -147,10 +137,7 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
                           <LifeBuoy size={14} /> Support
                         </button>
                         <div className="h-px bg-white/5 my-1" />
-                        <button 
-                          onClick={handleLogout} 
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition-all uppercase tracking-widest"
-                        >
+                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition-all uppercase tracking-widest">
                           <LogOut size={14} /> Sign Out
                         </button>
                       </div>
@@ -162,7 +149,7 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
           ) : (
             <button 
               onClick={() => document.getElementById('auth-section')?.scrollIntoView({behavior: 'smooth'})} 
-              className="px-8 py-2.5 bg-[#ff0055] hover:bg-[#d60045] text-white rounded-xl font-black text-[10px] uppercase shadow-[0_0_20px_rgba(255,0,85,0.3)] hover:shadow-[0_0_30px_rgba(255,0,85,0.5)] transition-all duration-300 transform hover:-translate-y-0.5"
+              className="px-8 py-2.5 bg-[#ff0055] hover:bg-[#d60045] text-white rounded-xl font-black text-[10px] uppercase transition-all duration-300"
             >
               Login
             </button>
