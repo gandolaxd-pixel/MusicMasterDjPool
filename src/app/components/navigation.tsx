@@ -3,7 +3,12 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabase';
 
-export function Navigation({ user, onSearch }: { user: any, onSearch: (term: string) => void }) {
+// Añadimos onGoHome a las props para manejar el reset de la vista
+export function Navigation({ user, onSearch, onGoHome }: { 
+  user: any, 
+  onSearch: (term: string) => void,
+  onGoHome: () => void 
+}) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,12 +22,13 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
     }
   };
 
-  // Función única para disparar la búsqueda
   const triggerSearch = () => {
     onSearch(searchTerm);
   };
 
+  // Definimos los enlaces, incluyendo el nuevo botón Home
   const links = [
+    { name: 'Home', onClick: onGoHome },
     { name: 'Latest Uploads', href: '#latest' },
     { name: 'DJ Pools', href: '#packs' },
     { name: 'Top Charts', href: '#charts' },
@@ -33,9 +39,13 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
     <nav className="fixed top-0 left-0 right-0 z-[60] bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 h-20">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
         
-        {/* IZQUIERDA: Logo */}
+        {/* IZQUIERDA: Logo + Enlaces */}
         <div className="flex items-center gap-10">
-          <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+          {/* El logo ahora también resetea la vista a Home */}
+          <div 
+            onClick={onGoHome}
+            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+          >
             <div className="bg-[#ff0055] p-1.5 rounded-lg shadow-[0_0_15px_rgba(255,0,85,0.4)]">
                <Disc className="w-5 h-5 text-white" />
             </div>
@@ -46,14 +56,30 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
           
           <div className="hidden lg:flex items-center gap-8">
             {links.map(l => (
-              <a key={l.name} href={l.href} className="text-xs font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-all duration-300">
-                {l.name}
-              </a>
+              l.onClick ? (
+                /* Renderizamos botón para Home */
+                <button 
+                  key={l.name} 
+                  onClick={l.onClick}
+                  className="text-xs font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-all duration-300"
+                >
+                  {l.name}
+                </button>
+              ) : (
+                /* Renderizamos enlace para anclas (#) */
+                <a 
+                  key={l.name} 
+                  href={l.href} 
+                  className="text-xs font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-all duration-300"
+                >
+                  {l.name}
+                </a>
+              )
             ))}
           </div>
         </div>
 
-        {/* DERECHA: Buscador con Acción Manual + Menú Usuario */}
+        {/* DERECHA: Buscador + Menú Usuario */}
         <div className="flex items-center gap-6">
           
           <div 
@@ -68,7 +94,6 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
                 isSearchOpen ? 'bg-white/5 border-white/20' : 'bg-transparent border-transparent'
               }`}
             >
-              {/* Clic en la lupa dispara la búsqueda */}
               <button 
                 onClick={triggerSearch}
                 className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white transition-colors"

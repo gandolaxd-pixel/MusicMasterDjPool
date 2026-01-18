@@ -9,7 +9,6 @@ import { Charts } from './Charts';
 import { AudioPlayer } from './AudioPlayer';
 import { Trends } from './Trends'; 
 import { AuthForm } from './AuthForm'; 
-import { SearchFilters } from './SearchFilters';
 import { Backpack, FolderArchive, Zap, History } from 'lucide-react';
 import { API_URL } from '../../config';
 
@@ -22,6 +21,9 @@ export default function App() {
   const [currentTrack, setCurrentTrack] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // 🧭 Estado para controlar qué sección mostramos
+  const [currentView, setCurrentView] = useState<'home' | 'search'>('home');
 
   const poolData = [
     { name: 'DJ City', img: '/pools/djcity.webp' },
@@ -38,20 +40,34 @@ export default function App() {
     { name: 'Cuba Remixes', img: '/pools/cubaremixes.png' },
   ];
 
-  // Lógica de filtrado: Combina búsqueda por texto y filtro por Pool
   const filteredTracks = useMemo(() => {
     return realTracks.filter(track => {
-      const matchesSearch = 
-        (track.title || track.filename || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (track.artist || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesGenre = selectedGenre 
-        ? track.pool_origin?.toLowerCase().includes(selectedGenre.toLowerCase()) 
-        : true;
-
-      return matchesSearch && matchesGenre;
+      const search = searchTerm.toLowerCase().trim();
+      if (!search) return true;
+      const title = (track.title || track.filename || '').toLowerCase();
+      const artist = (track.artist || '').toLowerCase();
+      return title.includes(search) || artist.includes(search);
     });
-  }, [realTracks, searchTerm, selectedGenre]);
+  }, [realTracks, searchTerm]);
+
+  // 🔍 Manejador de búsqueda: cambia a vista de búsqueda si hay texto
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    if (term.trim() !== '') {
+      setCurrentView('search');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setCurrentView('home');
+    }
+  };
+
+  // 🏠 Función para volver al inicio
+  const goHome = () => {
+    setSearchTerm('');
+    setSelectedGenre(null);
+    setCurrentView('home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handlePlay = (track: any) => {
     if (currentTrack && currentTrack.id === track.id) {
@@ -102,6 +118,7 @@ export default function App() {
 
   const handleGenreSelect = (genreName: string | null) => {
     setSelectedGenre(prev => prev === genreName ? null : genreName);
+    if (genreName) setCurrentView('home');
   };
 
   if (loading) return <div className="min-h-screen bg-black" />;
@@ -109,7 +126,7 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-black text-white antialiased">
-        <Navigation user={null} onSearch={setSearchTerm} />
+        <Navigation user={null} onSearch={handleSearch} onGoHome={goHome} />
         <Hero onJoinClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })} />
         <main className="max-w-7xl mx-auto px-4 py-20">
           <div id="auth-section" className="max-w-md mx-auto bg-[#0a0a0a] border border-white/10 p-10 rounded-3xl shadow-2xl">
@@ -126,73 +143,113 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#050505] font-sans text-white antialiased relative">
-      {/* Conectamos la búsqueda de la navegación con el estado de App */}
-      <Navigation user={user} onSearch={setSearchTerm} />
+      <Navigation user={user} onSearch={handleSearch} onGoHome={goHome} />
       
       <main className="pt-32 pb-40">
-        <div className="max-w-7xl mx-auto px-4 space-y-32">
+        <div className="max-w-7xl mx-auto px-4">
            
-           <section id="packs" className="pt-10">
-              <div className="text-center mb-16">
-                 <div className="flex justify-center mb-6">
-                   <div className="p-4 rounded-full bg-[#ff0055]/10 border border-[#ff0055]/20 shadow-[0_0_30px_rgba(255,0,85,0.2)]">
-                      <FolderArchive className="text-[#ff0055]" size={40} />
-                   </div>
-                </div>
-                <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white mb-4">
-                  Professional <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff0055] to-purple-600">DJ Pools </span>
-                </h2>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                {poolData.map((pool) => (
-                  <button key={pool.name} onClick={() => handleGenreSelect(pool.name)} className={`aspect-square bg-[#0a0a0a] border rounded-3xl flex items-center justify-center relative overflow-hidden group transition-all duration-300 shadow-2xl hover:scale-105 ${selectedGenre === pool.name ? 'border-[#ff0055] ring-2 ring-[#ff0055]/50' : 'border-white/10 hover:border-[#ff0055]'}`}>
-                    <img src={pool.img} alt={pool.name} className="w-full h-full object-cover transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-colors" />
+           {currentView === 'search' ? (
+             /* 🔍 SECCIÓN DE RESULTADOS DE BÚSQUEDA */
+             <section id="search-results" className="space-y-12 animate-in fade-in duration-500">
+                <div className="flex items-center justify-between border-b border-white/10 pb-8">
+                  <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">
+                    Search <span className="text-[#ff0055]">Results</span>
+                  </h2>
+                  <button 
+                    onClick={goHome}
+                    className="text-[10px] font-bold text-gray-500 hover:text-white uppercase tracking-widest transition-colors"
+                  >
+                    ← Back to Home
                   </button>
-                ))}
-              </div>
-           </section>
-
-           <section id="latest">
-              <div className="text-center mb-10">
-                 <h3 className="text-3xl font-black uppercase italic tracking-tighter text-white">
-                   {searchTerm ? `Results for: ${searchTerm}` : 'Latest Drops'}
-                 </h3>
-              </div>
-              
-              <LatestUploads 
-                tracks={filteredTracks}  
-                selectedGenre={selectedGenre} 
-                onGenreSelect={handleGenreSelect} 
-                onToggleCrate={toggleCrate} 
-                crate={crate} 
-                user={user}
-                onPlay={handlePlay}
-                currentTrack={currentTrack} 
-                isPlaying={isPlaying} 
-              />
-           </section>
-           
-           <div id="charts" className="bg-[#0a0a0a] rounded-3xl border border-white/5 p-8">
-              <Charts user={user} />
-           </div>
-
-           <section id="retro" className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-black p-10 rounded-3xl border border-white/10 group cursor-pointer hover:border-[#ff0055]/50 transition-all">
-                <div className="relative z-10">
-                  <h3 className="text-3xl font-black uppercase italic mb-2 group-hover:text-[#ff0055] transition-colors">DJ Tools</h3>
-                  <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Acapellas • Transitions • Edits</p>
                 </div>
-                <Zap size={100} className="absolute -right-6 -bottom-6 text-white/5 group-hover:text-[#ff0055]/10 transition-colors" />
-              </div>
-              <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-black p-10 rounded-3xl border border-white/10 group cursor-pointer hover:border-blue-500/50 transition-all">
-                <div className="relative z-10">
-                  <h3 className="text-3xl font-black uppercase italic mb-2 group-hover:text-blue-500 transition-colors">Retro Vault</h3>
-                  <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">70s • 80s • 90s • 00s Classics</p>
-                </div>
-                <History size={100} className="absolute -right-6 -bottom-6 text-white/5 group-hover:text-blue-500/10 transition-colors" />
-              </div>
-           </section>
+
+                <LatestUploads 
+                  tracks={filteredTracks}  
+                  selectedGenre={null} 
+                  onGenreSelect={() => {}} 
+                  onToggleCrate={toggleCrate} 
+                  crate={crate} 
+                  user={user}
+                  onPlay={handlePlay}
+                  currentTrack={currentTrack} 
+                  isPlaying={isPlaying} 
+                />
+
+                {filteredTracks.length === 0 && (
+                  <div className="py-20 text-center">
+                    <p className="text-gray-500 font-bold uppercase tracking-widest">No tracks found for "{searchTerm}"</p>
+                  </div>
+                )}
+             </section>
+           ) : (
+             /* 🏠 SECCIÓN HOME PRINCIPAL */
+             <div className="space-y-32">
+               <section id="packs" className="pt-10">
+                  <div className="text-center mb-16">
+                     <div className="flex justify-center mb-6">
+                       <div className="p-4 rounded-full bg-[#ff0055]/10 border border-[#ff0055]/20 shadow-[0_0_30px_rgba(255,0,85,0.2)]">
+                          <FolderArchive className="text-[#ff0055]" size={40} />
+                       </div>
+                    </div>
+                    <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white mb-4">
+                      Professional <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff0055] to-purple-600">DJ Pools </span>
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                    {poolData.map((pool) => (
+                      <button 
+                        key={pool.name} 
+                        onClick={() => handleGenreSelect(pool.name)} 
+                        className={`aspect-square bg-[#0a0a0a] border rounded-3xl flex items-center justify-center relative overflow-hidden group transition-all duration-300 shadow-2xl hover:scale-105 ${selectedGenre === pool.name ? 'border-[#ff0055] ring-2 ring-[#ff0055]/50' : 'border-white/10 hover:border-[#ff0055]'}`}
+                      >
+                        <img src={pool.img} alt={pool.name} className="w-full h-full object-cover transition-transform duration-500" />
+                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-colors" />
+                      </button>
+                    ))}
+                  </div>
+               </section>
+
+               <Trends onToggleCrate={toggleCrate} crate={crate} />
+
+               <section id="latest">
+                  <div className="text-center mb-10">
+                     <h3 className="text-3xl font-black uppercase italic tracking-tighter text-white">Latest <span className="text-[#ff0055]">Drops</span></h3>
+                  </div>
+                  <LatestUploads 
+                    tracks={realTracks.filter(t => !selectedGenre || t.pool_origin === selectedGenre)}  
+                    selectedGenre={selectedGenre} 
+                    onGenreSelect={handleGenreSelect} 
+                    onToggleCrate={toggleCrate} 
+                    crate={crate} 
+                    user={user}
+                    onPlay={handlePlay}
+                    currentTrack={currentTrack} 
+                    isPlaying={isPlaying} 
+                  />
+               </section>
+               
+               <div id="charts" className="bg-[#0a0a0a] rounded-3xl border border-white/5 p-8">
+                  <Charts user={user} />
+               </div>
+
+               <section id="retro" className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-black p-10 rounded-3xl border border-white/10 group cursor-pointer hover:border-[#ff0055]/50 transition-all">
+                    <div className="relative z-10">
+                      <h3 className="text-3xl font-black uppercase italic mb-2 group-hover:text-[#ff0055] transition-colors">DJ Tools</h3>
+                      <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Acapellas • Transitions • Edits</p>
+                    </div>
+                    <Zap size={100} className="absolute -right-6 -bottom-6 text-white/5 group-hover:text-[#ff0055]/10 transition-colors" />
+                  </div>
+                  <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-black p-10 rounded-3xl border border-white/10 group cursor-pointer hover:border-blue-500/50 transition-all">
+                    <div className="relative z-10">
+                      <h3 className="text-3xl font-black uppercase italic mb-2 group-hover:text-blue-500 transition-colors">Retro Vault</h3>
+                      <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">70s • 80s • 90s • 00s Classics</p>
+                    </div>
+                    <History size={100} className="absolute -right-6 -bottom-6 text-white/5 group-hover:text-blue-500/10 transition-colors" />
+                  </div>
+               </section>
+             </div>
+           )}
         </div>
       </main>
 
