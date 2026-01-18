@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 // Fíjate que supabase usa ../../, config debe hacer lo mismo
 import { supabase } from '../../supabase'; 
-import { Navigation } from './Navigation';
+import { Navigation } from './navigation';
 import { Hero } from './hero';
 import { FeaturedGenres } from './FeaturedGenres';
 import { LatestUploads } from './LatestUploads';
