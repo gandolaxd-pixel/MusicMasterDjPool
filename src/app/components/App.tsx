@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-// Fíjate que supabase usa ../../, config debe hacer lo mismo
+import { useState, useEffect, useMemo } from 'react'; // Añadimos useMemo para velocidad
 import { supabase } from '../../supabase'; 
 import { Navigation } from './navigation';
 import { Hero } from './hero';
@@ -10,9 +9,8 @@ import { Charts } from './Charts';
 import { AudioPlayer } from './AudioPlayer';
 import { Trends } from './Trends'; 
 import { AuthForm } from './AuthForm'; 
+import { SearchFilters } from './SearchFilters'; // Importamos el buscador
 import { Backpack, FolderArchive, Zap, History, Disc } from 'lucide-react';
-
-// ✅ CORREGIDO: Usamos ../../ para salir hasta la carpeta src/
 import { API_URL } from '../../config';
 
 export default function App() {
@@ -20,11 +18,12 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [crate, setCrate] = useState<any[]>([]);
-  
   const [realTracks, setRealTracks] = useState<any[]>([]);
-  
   const [currentTrack, setCurrentTrack] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  
+  // 🔍 NUEVO: Estado para el buscador
+  const [searchTerm, setSearchTerm] = useState('');
 
   const poolData = [
     { name: 'DJ City', img: '/pools/djcity.webp' },
@@ -41,12 +40,20 @@ export default function App() {
     { name: 'Cuba Remixes', img: '/pools/cubaremixes.png' },
   ];
 
+  // 🔍 NUEVO: Lógica de filtrado inteligente (Título o Artista)
+  const filteredTracks = useMemo(() => {
+    return realTracks.filter(track => {
+      const search = searchTerm.toLowerCase();
+      const title = (track.title || track.filename || '').toLowerCase();
+      const artist = (track.artist || '').toLowerCase();
+      return title.includes(search) || artist.includes(search);
+    });
+  }, [realTracks, searchTerm]);
+
   const handlePlay = (track: any) => {
     if (currentTrack && currentTrack.id === track.id) {
       setIsPlaying(!isPlaying); 
     } else {
-      console.log("▶️ Play:", track.filename);
-      // Usamos la variable mágica importada correctamente
       const streamUrl = `${API_URL}/stream?path=${encodeURIComponent(track.file_path)}`;
       setCurrentTrack({
         ...track,
@@ -70,7 +77,7 @@ export default function App() {
     getInitialSession();
 
     const fetchTracks = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('tracks')
         .select('*')
         .order('created_at', { ascending: false })
@@ -99,7 +106,6 @@ export default function App() {
 
   if (loading) return <div className="min-h-screen bg-black" />;
 
-  // --- VISTA PÚBLICA ---
   if (!user) {
     return (
       <div className="min-h-screen bg-black text-white antialiased">
@@ -121,7 +127,6 @@ export default function App() {
     );
   }
 
-  // --- VISTA PRIVADA ---
   return (
     <div className="min-h-screen bg-[#050505] font-sans text-white antialiased relative">
       <Navigation user={user} />
@@ -129,6 +134,7 @@ export default function App() {
       <main className="pt-32 pb-40">
         <div className="max-w-7xl mx-auto px-4 space-y-32">
            
+           {/* SECCIÓN DE POOLS */}
            <section id="packs" className="pt-10">
               <div className="text-center mb-16">
                  <div className="flex justify-center mb-6">
@@ -139,26 +145,20 @@ export default function App() {
                 <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white mb-4">
                   Professional <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff0055] to-purple-600">DJ Pools </span>
                 </h2>
-                <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-xs">Direct Access • High Quality Audio • 12 Premium Pools</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
                 {poolData.map((pool) => (
-                  <button key={pool.name} className="aspect-square bg-[#0a0a0a] border border-white/10 rounded-3xl flex items-center justify-center relative overflow-hidden group hover:border-[#ff0055] transition-all duration-300 shadow-2xl hover:scale-105">
-                    {pool.img ? (
-                      <div className="p-0 w-full h-full flex items-center justify-center bg-white/5">
-                        <img src={pool.img} alt={pool.name} className="w-full h-full object-cover transition-transform duration-500" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.parentElement!.innerHTML = `<div class="flex flex-col items-center gap-2"><svg class="w-8 h-8 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg><span class="text-[10px] font-black text-gray-500 uppercase text-center">${pool.name}</span></div>`; }} />
-                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 p-2">
-                        <Disc className="text-gray-700 group-hover:text-white transition-colors" size={32} />
-                        <span className="text-[10px] font-black text-gray-500 group-hover:text-white uppercase tracking-tight text-center leading-tight">{pool.name}</span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#ff0055]/30 rounded-3xl pointer-events-none transition-all" />
+                  <button key={pool.name} onClick={() => handleGenreSelect(pool.name)} className="aspect-square bg-[#0a0a0a] border border-white/10 rounded-3xl flex items-center justify-center relative overflow-hidden group hover:border-[#ff0055] transition-all duration-300 shadow-2xl hover:scale-105">
+                    <img src={pool.img} alt={pool.name} className="w-full h-full object-cover transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-colors" />
                   </button>
                 ))}
               </div>
+           </section>
+
+           {/* 🔍 NUEVO: BUSCADOR INTEGRADO */}
+           <section id="search" className="pt-10">
+              <SearchFilters searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
            </section>
 
            <div className="pt-10 border-t border-white/5">
@@ -167,12 +167,12 @@ export default function App() {
 
            <section id="latest">
               <div className="text-center mb-10">
-                 <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600 mb-2">Daily Updates</h2>
                  <h3 className="text-3xl font-black uppercase italic tracking-tighter text-white">Latest <span className="text-[#ff0055]">Drops</span></h3>
               </div>
               
+              {/* ✅ PASAMOS filteredTracks EN LUGAR DE realTracks */}
               <LatestUploads 
-                tracks={realTracks}  
+                tracks={filteredTracks}  
                 selectedGenre={selectedGenre} 
                 onGenreSelect={handleGenreSelect} 
                 onToggleCrate={toggleCrate} 
