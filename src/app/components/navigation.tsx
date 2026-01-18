@@ -1,10 +1,13 @@
-import { Disc, User, LogOut, ChevronDown, Settings, History, LifeBuoy } from 'lucide-react'; 
+import { Disc, User, LogOut, ChevronDown, Settings, History, LifeBuoy, Search, X } from 'lucide-react'; 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabase';
 
-export function Navigation({ user }: { user: any }) {
+// Añadimos onSearch a las props para que la búsqueda funcione de verdad
+export function Navigation({ user, onSearch }: { user: any, onSearch: (term: string) => void }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleLogout = async () => {
     try {
@@ -13,6 +16,11 @@ export function Navigation({ user }: { user: any }) {
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    onSearch(searchTerm);
   };
 
   const links = [
@@ -50,10 +58,53 @@ export function Navigation({ user }: { user: any }) {
           </div>
         </div>
 
-        {/* DERECHA: Menú Usuario */}
-        <div className="flex items-center gap-4">
+        {/* DERECHA: Buscador + Menú Usuario */}
+        <div className="flex items-center gap-6">
+          
+          {/* BARRA DE BÚSQUEDA ANIMADA */}
+          <div className="relative flex items-center">
+            <motion.div 
+              initial={false}
+              animate={{ width: isSearchOpen ? 240 : 40 }}
+              className={`flex items-center h-10 rounded-xl border transition-colors duration-300 ${
+                isSearchOpen ? 'bg-white/5 border-white/20' : 'bg-transparent border-transparent hover:bg-white/5'
+              }`}
+            >
+              <button 
+                onClick={() => {
+                  if (isSearchOpen && searchTerm) {
+                    handleSearchSubmit();
+                  } else {
+                    setIsSearchOpen(!isSearchOpen);
+                  }
+                }}
+                className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white transition-colors"
+              >
+                <Search size={18} />
+              </button>
+
+              <AnimatePresence>
+                {isSearchOpen && (
+                  <motion.input
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    autoFocus
+                    type="text"
+                    placeholder="Search tracks, artists..."
+                    className="bg-transparent border-none focus:ring-0 text-[11px] font-bold text-white uppercase tracking-wider w-full pr-4"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
+                  />
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+
           {user ? (
             <div className="relative">
+              {/* ... Resto de tu código de usuario igual ... */}
               <button 
                 onClick={() => setUserMenuOpen(!userMenuOpen)} 
                 className={`flex items-center gap-3 px-5 py-2.5 rounded-xl border transition-all duration-300 ${
@@ -93,13 +144,10 @@ export function Navigation({ user }: { user: any }) {
                         <button className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all uppercase tracking-widest">
                           <Settings size={14} /> Settings
                         </button>
-                        {/* BOTÓN RESTAURADO */}
                         <button className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-[#ff0055] hover:bg-[#ff0055]/10 rounded-lg transition-all uppercase tracking-widest">
                           <LifeBuoy size={14} /> Support
                         </button>
-                        
                         <div className="h-px bg-white/5 my-1" />
-                        
                         <button 
                           onClick={handleLogout} 
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition-all uppercase tracking-widest"

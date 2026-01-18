@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'; // Añadimos useMemo para velocidad
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabase'; 
 import { Navigation } from './navigation';
 import { Hero } from './hero';
@@ -9,8 +9,8 @@ import { Charts } from './Charts';
 import { AudioPlayer } from './AudioPlayer';
 import { Trends } from './Trends'; 
 import { AuthForm } from './AuthForm'; 
-import { SearchFilters } from './SearchFilters'; // Importamos el buscador
-import { Backpack, FolderArchive, Zap, History, Disc } from 'lucide-react';
+import { SearchFilters } from './SearchFilters';
+import { Backpack, FolderArchive, Zap, History } from 'lucide-react';
 import { API_URL } from '../../config';
 
 export default function App() {
@@ -21,8 +21,6 @@ export default function App() {
   const [realTracks, setRealTracks] = useState<any[]>([]);
   const [currentTrack, setCurrentTrack] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  
-  // 🔍 NUEVO: Estado para el buscador
   const [searchTerm, setSearchTerm] = useState('');
 
   const poolData = [
@@ -40,25 +38,27 @@ export default function App() {
     { name: 'Cuba Remixes', img: '/pools/cubaremixes.png' },
   ];
 
-  // 🔍 NUEVO: Lógica de filtrado inteligente (Título o Artista)
+  // Lógica de filtrado: Combina búsqueda por texto y filtro por Pool
   const filteredTracks = useMemo(() => {
     return realTracks.filter(track => {
-      const search = searchTerm.toLowerCase();
-      const title = (track.title || track.filename || '').toLowerCase();
-      const artist = (track.artist || '').toLowerCase();
-      return title.includes(search) || artist.includes(search);
+      const matchesSearch = 
+        (track.title || track.filename || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (track.artist || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesGenre = selectedGenre 
+        ? track.pool_origin?.toLowerCase().includes(selectedGenre.toLowerCase()) 
+        : true;
+
+      return matchesSearch && matchesGenre;
     });
-  }, [realTracks, searchTerm]);
+  }, [realTracks, searchTerm, selectedGenre]);
 
   const handlePlay = (track: any) => {
     if (currentTrack && currentTrack.id === track.id) {
       setIsPlaying(!isPlaying); 
     } else {
       const streamUrl = `${API_URL}/stream?path=${encodeURIComponent(track.file_path)}`;
-      setCurrentTrack({
-        ...track,
-        streamUrl: streamUrl
-      });
+      setCurrentTrack({ ...track, streamUrl });
       setIsPlaying(true);
     }
   };
@@ -109,7 +109,7 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-black text-white antialiased">
-        <Navigation user={null} />
+        <Navigation user={null} onSearch={setSearchTerm} />
         <Hero onJoinClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })} />
         <main className="max-w-7xl mx-auto px-4 py-20">
           <div id="auth-section" className="max-w-md mx-auto bg-[#0a0a0a] border border-white/10 p-10 rounded-3xl shadow-2xl">
@@ -117,9 +117,6 @@ export default function App() {
               DJ <span className="text-[#ff0055]">Access</span>
             </h2>
             <AuthForm />
-          </div>
-          <div className="mt-32">
-            <FeaturedGenres onGenreSelect={() => {}} activeGenre={null} user={null} />
           </div>
         </main>
         <Footer />
@@ -129,12 +126,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#050505] font-sans text-white antialiased relative">
-      <Navigation user={user} />
+      {/* Conectamos la búsqueda de la navegación con el estado de App */}
+      <Navigation user={user} onSearch={setSearchTerm} />
       
       <main className="pt-32 pb-40">
         <div className="max-w-7xl mx-auto px-4 space-y-32">
            
-           {/* SECCIÓN DE POOLS */}
            <section id="packs" className="pt-10">
               <div className="text-center mb-16">
                  <div className="flex justify-center mb-6">
@@ -148,7 +145,7 @@ export default function App() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
                 {poolData.map((pool) => (
-                  <button key={pool.name} onClick={() => handleGenreSelect(pool.name)} className="aspect-square bg-[#0a0a0a] border border-white/10 rounded-3xl flex items-center justify-center relative overflow-hidden group hover:border-[#ff0055] transition-all duration-300 shadow-2xl hover:scale-105">
+                  <button key={pool.name} onClick={() => handleGenreSelect(pool.name)} className={`aspect-square bg-[#0a0a0a] border rounded-3xl flex items-center justify-center relative overflow-hidden group transition-all duration-300 shadow-2xl hover:scale-105 ${selectedGenre === pool.name ? 'border-[#ff0055] ring-2 ring-[#ff0055]/50' : 'border-white/10 hover:border-[#ff0055]'}`}>
                     <img src={pool.img} alt={pool.name} className="w-full h-full object-cover transition-transform duration-500" />
                     <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-colors" />
                   </button>
@@ -156,21 +153,13 @@ export default function App() {
               </div>
            </section>
 
-           {/* 🔍 NUEVO: BUSCADOR INTEGRADO */}
-           <section id="search" className="pt-10">
-              <SearchFilters searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-           </section>
-
-           <div className="pt-10 border-t border-white/5">
-              <Trends onToggleCrate={toggleCrate} crate={crate} />
-           </div>
-
            <section id="latest">
               <div className="text-center mb-10">
-                 <h3 className="text-3xl font-black uppercase italic tracking-tighter text-white">Latest <span className="text-[#ff0055]">Drops</span></h3>
+                 <h3 className="text-3xl font-black uppercase italic tracking-tighter text-white">
+                   {searchTerm ? `Results for: ${searchTerm}` : 'Latest Drops'}
+                 </h3>
               </div>
               
-              {/* ✅ PASAMOS filteredTracks EN LUGAR DE realTracks */}
               <LatestUploads 
                 tracks={filteredTracks}  
                 selectedGenre={selectedGenre} 
@@ -204,10 +193,6 @@ export default function App() {
                 <History size={100} className="absolute -right-6 -bottom-6 text-white/5 group-hover:text-blue-500/10 transition-colors" />
               </div>
            </section>
-
-           <div id="genres">
-             <FeaturedGenres onGenreSelect={handleGenreSelect} activeGenre={selectedGenre} user={user} />
-           </div>
         </div>
       </main>
 
