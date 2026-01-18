@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabase';
 
-// Añadimos onSearch a las props para que la búsqueda funcione de verdad
 export function Navigation({ user, onSearch }: { user: any, onSearch: (term: string) => void }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -92,7 +91,8 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
                     autoFocus
                     type="text"
                     placeholder="Search tracks, artists..."
-                    className="bg-transparent border-none focus:ring-0 text-[11px] font-bold text-white uppercase tracking-wider w-full pr-4"
+                    // EDITADO: Añadido focus:ring-0 y focus:outline-none para quitar el cuadrado blanco
+                    className="bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[11px] font-bold text-white uppercase tracking-wider w-full pr-4 shadow-none"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
@@ -104,7 +104,6 @@ export function Navigation({ user, onSearch }: { user: any, onSearch: (term: str
 
           {user ? (
             <div className="relative">
-              {/* ... Resto de tu código de usuario igual ... */}
               <button 
                 onClick={() => setUserMenuOpen(!userMenuOpen)} 
                 className={`flex items-center gap-3 px-5 py-2.5 rounded-xl border transition-all duration-300 ${
