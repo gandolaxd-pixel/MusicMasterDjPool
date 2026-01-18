@@ -1,13 +1,13 @@
 import { useRef, useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Play, Pause, SkipBack, SkipForward, Disc, Download, Volume2, VolumeX } from 'lucide-react';
 
 type Props = {
   url: string;
   title: string;
   artist: string;
-  isPlaying: boolean; // <--- Recibimos la orden de App
-  onTogglePlay: () => void; // <--- Enviamos la señal de pausa a App
+  isPlaying: boolean;
+  onTogglePlay: () => void;
 };
 
 export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Props) {
@@ -19,7 +19,6 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
 
-  // EFECTO MÁGICO: Si 'isPlaying' cambia en App, el audio obedece
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -30,7 +29,6 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
     }
   }, [isPlaying, url]);
 
-  // Actualizar volumen
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = isMuted ? 0 : volume;
   }, [volume, isMuted]);
@@ -68,9 +66,11 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
     return `${m}:${s}`;
   };
 
+  // Generamos la URL de descarga añadiendo el parámetro necesario para el backend
+  const downloadUrl = url ? (url.includes('?') ? `${url}&download=true` : `${url}?download=true`) : "#";
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4">
-      {/* onEnded: cuando termina la canción, avisamos a App para pausar */}
       <audio ref={audioRef} src={url} onTimeUpdate={onTimeUpdate} onEnded={() => onTogglePlay()} crossOrigin="anonymous" />
 
       <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="max-w-7xl mx-auto bg-black/95 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
@@ -116,7 +116,16 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
                     <input type="range" min="0" max="1" step="0.05" value={isMuted ? 0 : volume} onChange={handleVolumeChange} className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-[#ff0055]" />
                 </div>
             </div>
-            <motion.a whileHover={{ scale: 1.05 }} href={url} download target="_blank" className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 text-white hover:border-[#ff0055] hover:text-[#ff0055] transition-all"><Download size={14} /></motion.a>
+            {/* CORRECCIÓN: Usamos la downloadUrl con el parámetro de descarga forzada */}
+            <motion.a 
+              whileHover={{ scale: 1.05 }} 
+              href={downloadUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 text-white hover:border-[#ff0055] hover:text-[#ff0055] transition-all"
+            >
+              <Download size={14} />
+            </motion.a>
           </div>
         </div>
       </motion.div>
