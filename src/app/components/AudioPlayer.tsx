@@ -66,7 +66,6 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
     return `${m}:${s}`;
   };
 
-  // Generamos la URL de descarga añadiendo el parámetro necesario para el backend
   const downloadUrl = url ? (url.includes('?') ? `${url}&download=true` : `${url}?download=true`) : "#";
 
   return (
@@ -75,6 +74,7 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
 
       <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="max-w-7xl mx-auto bg-black/95 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
         <div className="flex items-center gap-4 md:gap-6">
+          
           <div className="flex items-center gap-3 min-w-[150px] md:min-w-[200px] max-w-[250px]">
             <div className="relative flex-shrink-0">
               <motion.div animate={isPlaying ? { rotate: 360 } : {}} transition={{ duration: 3, repeat: Infinity, ease: "linear" }}>
@@ -107,16 +107,23 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
             <span className="text-[9px] font-mono text-gray-400 w-8 hidden sm:block">{formatTime(duration)}</span>
           </div>
 
+          {/* 🛠️ MODIFICACIÓN: Volumen FIJO y SIEMPRE VISIBLE */}
           <div className="flex items-center gap-4 border-l border-white/10 pl-4">
-            <div className="hidden md:flex items-center gap-2 group">
-                <button onClick={toggleMute} className="text-gray-400 hover:text-white">
-                    {isMuted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            <div className="hidden lg:flex items-center gap-3">
+                <button onClick={toggleMute} className="text-gray-400 hover:text-white transition-colors">
+                    {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 </button>
-                <div className="w-0 group-hover:w-20 transition-all duration-300 overflow-hidden">
-                    <input type="range" min="0" max="1" step="0.05" value={isMuted ? 0 : volume} onChange={handleVolumeChange} className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-[#ff0055]" />
-                </div>
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="1" 
+                  step="0.05" 
+                  value={isMuted ? 0 : volume} 
+                  onChange={handleVolumeChange} 
+                  className="w-20 md:w-24 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#ff0055] hover:bg-white/20 transition-all" 
+                />
             </div>
-            {/* CORRECCIÓN: Usamos la downloadUrl con el parámetro de descarga forzada */}
+
             <motion.a 
               whileHover={{ scale: 1.05 }} 
               href={downloadUrl} 
