@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Master Music Dj Pool</title>
+    
+    <style>
+      /* Desactiva el desenfoque pesado que mata la GPU */
+      * {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+      
+      /* Optimización de imágenes para que no carguen si no se ven */
+      img {
+        content-visibility: auto;
+        transform: translateZ(0); /* Fuerza aceleración hardware simple */
+      }
+
+      /* Evita animaciones infinitas pesadas */
+      .animate-spin {
+        animation: none !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
