@@ -3,12 +3,11 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabase';
 
-// Actualizamos las Props para incluir onGoPools
 export function Navigation({ user, onSearch, onGoHome, onGoPools }: { 
   user: any, 
   onSearch: (term: string) => void,
   onGoHome: () => void,
-  onGoPools: () => void // Nueva prop conectada al App.tsx
+  onGoPools: () => void 
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -27,12 +26,11 @@ export function Navigation({ user, onSearch, onGoHome, onGoPools }: {
     onSearch(searchTerm);
   };
 
-  // Organizamos los enlaces: Home y DJ Pools ahora son botones de navegación
   const links = [
     { name: 'Home', onClick: onGoHome },
-    { name: 'DJ Pools', onClick: onGoPools }, // Ahora cambia la vista en lugar de saltar con #
+    { name: 'DJ Pools', onClick: onGoPools },
     { name: 'Latest Uploads', href: '#latest' },
-    { name: 'Top Charts', href: '#charts' },
+    { name: 'DJ Packs', href: '#charts' }, // CAMBIADO: Antes era 'Top Charts'
     { name: 'Retro Vault', href: '#retro' },
   ];
 
@@ -57,7 +55,6 @@ export function Navigation({ user, onSearch, onGoHome, onGoPools }: {
           <div className="hidden lg:flex items-center gap-8">
             {links.map(l => (
               l.onClick ? (
-                /* Botones de navegación (Home, Pools) */
                 <button 
                   key={l.name} 
                   onClick={l.onClick}
@@ -66,7 +63,6 @@ export function Navigation({ user, onSearch, onGoHome, onGoPools }: {
                   {l.name}
                 </button>
               ) : (
-                /* Enlaces de ancla (#) */
                 <a 
                   key={l.name} 
                   href={l.href} 
