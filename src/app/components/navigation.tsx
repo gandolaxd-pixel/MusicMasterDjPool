@@ -3,11 +3,12 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabase';
 
-// Añadimos onGoHome a las props para manejar el reset de la vista
-export function Navigation({ user, onSearch, onGoHome }: { 
+// Actualizamos las Props para incluir onGoPools
+export function Navigation({ user, onSearch, onGoHome, onGoPools }: { 
   user: any, 
   onSearch: (term: string) => void,
-  onGoHome: () => void 
+  onGoHome: () => void,
+  onGoPools: () => void // Nueva prop conectada al App.tsx
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -26,11 +27,11 @@ export function Navigation({ user, onSearch, onGoHome }: {
     onSearch(searchTerm);
   };
 
-  // Definimos los enlaces, incluyendo el nuevo botón Home
+  // Organizamos los enlaces: Home y DJ Pools ahora son botones de navegación
   const links = [
     { name: 'Home', onClick: onGoHome },
+    { name: 'DJ Pools', onClick: onGoPools }, // Ahora cambia la vista en lugar de saltar con #
     { name: 'Latest Uploads', href: '#latest' },
-    { name: 'DJ Pools', href: '#packs' },
     { name: 'Top Charts', href: '#charts' },
     { name: 'Retro Vault', href: '#retro' },
   ];
@@ -41,7 +42,6 @@ export function Navigation({ user, onSearch, onGoHome }: {
         
         {/* IZQUIERDA: Logo + Enlaces */}
         <div className="flex items-center gap-10">
-          {/* El logo ahora también resetea la vista a Home */}
           <div 
             onClick={onGoHome}
             className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
@@ -57,16 +57,16 @@ export function Navigation({ user, onSearch, onGoHome }: {
           <div className="hidden lg:flex items-center gap-8">
             {links.map(l => (
               l.onClick ? (
-                /* Renderizamos botón para Home */
+                /* Botones de navegación (Home, Pools) */
                 <button 
                   key={l.name} 
                   onClick={l.onClick}
-                  className="text-xs font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-all duration-300"
+                  className="text-xs font-bold text-gray-400 hover:text-[#ff0055] uppercase tracking-widest transition-all duration-300"
                 >
                   {l.name}
                 </button>
               ) : (
-                /* Renderizamos enlace para anclas (#) */
+                /* Enlaces de ancla (#) */
                 <a 
                   key={l.name} 
                   href={l.href} 
@@ -81,7 +81,6 @@ export function Navigation({ user, onSearch, onGoHome }: {
 
         {/* DERECHA: Buscador + Menú Usuario */}
         <div className="flex items-center gap-6">
-          
           <div 
             className="relative flex items-center"
             onMouseEnter={() => setIsSearchOpen(true)}
@@ -109,7 +108,7 @@ export function Navigation({ user, onSearch, onGoHome }: {
                     exit={{ opacity: 0 }}
                     autoFocus
                     type="text"
-                    placeholder="Press Enter to search..."
+                    placeholder="Search..."
                     className="bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[11px] font-bold text-white uppercase tracking-wider w-full pr-4 shadow-none"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}

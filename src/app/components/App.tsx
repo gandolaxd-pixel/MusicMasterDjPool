@@ -1,58 +1,71 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabase'; 
+import { API_URL } from '../../config';
+
 import { Navigation } from './navigation';
 import { Hero } from './hero';
-import { FeaturedGenres } from './FeaturedGenres';
 import { LatestUploads } from './LatestUploads';
 import { Footer } from './Footer';
 import { Charts } from './Charts';
 import { AudioPlayer } from './AudioPlayer';
 import { Trends } from './Trends'; 
 import { AuthForm } from './AuthForm'; 
-import { Backpack, FolderArchive, Zap, History } from 'lucide-react';
-import { API_URL } from '../../config';
+import PoolGrid from './PoolGrid';
+
+import { Backpack, FolderArchive, Zap, History, ChevronLeft, ChevronRight } from 'lucide-react';
+
+export interface Track {
+  id: string;
+  title: string;
+  artist?: string;
+  filename: string;
+  file_path: string;
+  pool_origin?: string;
+  created_at: string;
+  streamUrl?: string; 
+}
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-  const [crate, setCrate] = useState<any[]>([]);
-  const [realTracks, setRealTracks] = useState<any[]>([]);
-  const [currentTrack, setCurrentTrack] = useState<any>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [currentView, setCurrentView] = useState<'home' | 'search' | 'pools'>('home');
   
-  // 🧭 Estado para controlar qué sección mostramos
-  const [currentView, setCurrentView] = useState<'home' | 'search'>('home');
+  // --- AJUSTE DE PAGINACIÓN A 10 ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // Cambiado de 20 a 10 según tu solicitud
 
-  const poolData = [
-    { name: 'DJ City', img: '/pools/djcity.webp' },
-    { name: 'BPM Supreme', img: '/pools/bpmsupreme.jpg' },
-    { name: 'Club Killers', img: '/pools/clubkillers.png' },
-    { name: 'Heavy Hits', img: '/pools/heavyhits.jpeg' },
-    { name: 'Beatport', img: '/pools/beatport.svg' },
-    { name: 'Mashup Pack', img: '/pools/themashup.jpg' },
-    { name: 'LatinRemixes', img: '/pools/latinremixes.png' },
-    { name: 'AreYouKidy', img: '/pools/areyoukidy.jpg' },
-    { name: 'BangerzArmy', img: '/pools/bangerzarmy.png' },
-    { name: 'Crooklyn Clan', img: '/pools/crooklynclan.jpg' },
-    { name: 'BPM Latino', img: '/pools/bpmlatino.jpg' },
-    { name: 'Cuba Remixes', img: '/pools/cubaremixes.png' },
-  ];
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [realTracks, setRealTracks] = useState<Track[]>([]);
+  const [crate, setCrate] = useState<Track[]>([]);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const filteredTracks = useMemo(() => {
     return realTracks.filter(track => {
+      const matchesGenre = !selectedGenre || track.pool_origin === selectedGenre;
       const search = searchTerm.toLowerCase().trim();
-      if (!search) return true;
       const title = (track.title || track.filename || '').toLowerCase();
       const artist = (track.artist || '').toLowerCase();
-      return title.includes(search) || artist.includes(search);
+      const matchesSearch = !search || title.includes(search) || artist.includes(search);
+      return matchesGenre && matchesSearch;
     });
-  }, [realTracks, searchTerm]);
+  }, [realTracks, selectedGenre, searchTerm]);
 
-  // 🔍 Manejador de búsqueda: cambia a vista de búsqueda si hay texto
+  const totalPages = Math.ceil(filteredTracks.length / itemsPerPage);
+  const currentTracksPage = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredTracks.slice(start, start + itemsPerPage);
+  }, [filteredTracks, currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    document.getElementById('latest')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const handleSearch = (term: string) => {
     setSearchTerm(term);
+    setCurrentPage(1);
     if (term.trim() !== '') {
       setCurrentView('search');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -61,15 +74,20 @@ export default function App() {
     }
   };
 
-  // 🏠 Función para volver al inicio
   const goHome = () => {
     setSearchTerm('');
     setSelectedGenre(null);
+    setCurrentPage(1);
     setCurrentView('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handlePlay = (track: any) => {
+  const goToPools = () => {
+    setCurrentView('pools');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePlay = (track: Track) => {
     if (currentTrack && currentTrack.id === track.id) {
       setIsPlaying(!isPlaying); 
     } else {
@@ -79,54 +97,56 @@ export default function App() {
     }
   };
 
+  const toggleCrate = (track: Track) => {
+    setCrate(prev => {
+      const exists = prev.find(t => t.id === track.id);
+      if (exists) return prev.filter(t => t.id !== track.id);
+      return prev.length < 50 ? [...prev, track] : prev;
+    });
+  };
+
+  const handleGenreSelect = (genreName: string | null) => {
+    setSelectedGenre(prev => prev === genreName ? null : genreName);
+    setCurrentPage(1);
+    if (currentView !== 'home') setCurrentView('home');
+    document.getElementById('latest')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   useEffect(() => {
     let mounted = true;
-    const getInitialSession = async () => {
+    const init = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (mounted) {
           setUser(session?.user ?? null);
           setLoading(false);
         }
-      } catch (error) { if (mounted) setLoading(false); }
-    };
-    getInitialSession();
-
-    const fetchTracks = async () => {
+      } catch (error) { 
+        if (mounted) setLoading(false); 
+      }
       const { data } = await supabase
         .from('tracks')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100);
-      if (data && mounted) setRealTracks(data);
+        .limit(200);
+      if (data && mounted) setRealTracks(data as Track[]);
     };
-    fetchTracks();
-
+    init();
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) setUser(session?.user ?? null);
     });
-    return () => { mounted = false; authListener.subscription.unsubscribe(); };
+    return () => { 
+      mounted = false; 
+      authListener.subscription.unsubscribe(); 
+    };
   }, []);
 
-  const toggleCrate = (track: any) => {
-    setCrate(prev => {
-      const exists = prev.find(t => t.id === track.id);
-      if (exists) return prev.filter(t => t.id !== track.id);
-      return prev.length < 20 ? [...prev, track] : prev;
-    });
-  };
-
-  const handleGenreSelect = (genreName: string | null) => {
-    setSelectedGenre(prev => prev === genreName ? null : genreName);
-    if (genreName) setCurrentView('home');
-  };
-
-  if (loading) return <div className="min-h-screen bg-black" />;
+  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#ff0055]"></div></div>;
 
   if (!user) {
     return (
       <div className="min-h-screen bg-black text-white antialiased">
-        <Navigation user={null} onSearch={handleSearch} onGoHome={goHome} />
+        <Navigation user={null} onSearch={handleSearch} onGoHome={goHome} onGoPools={goToPools} />
         <Hero onJoinClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })} />
         <main className="max-w-7xl mx-auto px-4 py-20">
           <div id="auth-section" className="max-w-md mx-auto bg-[#0a0a0a] border border-white/10 p-10 rounded-3xl shadow-2xl">
@@ -142,81 +162,50 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] font-sans text-white antialiased relative">
-      <Navigation user={user} onSearch={handleSearch} onGoHome={goHome} />
+    <div className="min-h-screen bg-[#050505] font-sans text-white antialiased relative selection:bg-[#ff0055] selection:text-white">
+      <Navigation 
+        user={user} 
+        onSearch={handleSearch} 
+        onGoHome={goHome} 
+        onGoPools={goToPools} 
+      />
       
       <main className="pt-32 pb-40">
         <div className="max-w-7xl mx-auto px-4">
            
-           {currentView === 'search' ? (
-             /* 🔍 SECCIÓN DE RESULTADOS DE BÚSQUEDA */
-             <section id="search-results" className="space-y-12 animate-in fade-in duration-500">
+           {currentView === 'search' && (
+             <section className="space-y-12 animate-in fade-in duration-500">
                 <div className="flex items-center justify-between border-b border-white/10 pb-8">
-                  <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">
-                    Search <span className="text-[#ff0055]">Results</span>
-                  </h2>
-                  <button 
-                    onClick={goHome}
-                    className="text-[10px] font-bold text-gray-500 hover:text-white uppercase tracking-widest transition-colors"
-                  >
-                    ← Back to Home
-                  </button>
+                  <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">Search <span className="text-[#ff0055]">Results</span></h2>
+                  <button onClick={goHome} className="text-xs font-bold text-gray-500 hover:text-white uppercase tracking-widest border border-white/10 px-4 py-2 rounded-full">← Back</button>
                 </div>
-
-                <LatestUploads 
-                  tracks={filteredTracks}  
-                  selectedGenre={null} 
-                  onGenreSelect={() => {}} 
-                  onToggleCrate={toggleCrate} 
-                  crate={crate} 
-                  user={user}
-                  onPlay={handlePlay}
-                  currentTrack={currentTrack} 
-                  isPlaying={isPlaying} 
-                />
-
-                {filteredTracks.length === 0 && (
-                  <div className="py-20 text-center">
-                    <p className="text-gray-500 font-bold uppercase tracking-widest">No tracks found for "{searchTerm}"</p>
-                  </div>
-                )}
+                <LatestUploads tracks={currentTracksPage} selectedGenre={null} onGenreSelect={() => {}} onToggleCrate={toggleCrate} crate={crate} user={user} onPlay={handlePlay} currentTrack={currentTrack} isPlaying={isPlaying} />
              </section>
-           ) : (
-             /* 🏠 SECCIÓN HOME PRINCIPAL */
+           )}
+
+           {currentView === 'pools' && (
+             <section className="pt-10 animate-in slide-in-from-bottom-4 duration-700">
+                <div className="text-center mb-16">
+                   <div className="flex justify-center mb-6">
+                     <div className="p-4 rounded-full bg-[#ff0055]/10 border border-[#ff0055]/20 shadow-[0_0_30px_rgba(255,0,85,0.2)]">
+                        <FolderArchive className="text-[#ff0055]" size={40} />
+                     </div>
+                  </div>
+                  <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white mb-4">
+                    Professional <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff0055] to-purple-600">DJ Pools </span>
+                  </h2>
+                </div>
+                <PoolGrid />
+             </section>
+           )}
+
+           {currentView === 'home' && (
              <div className="space-y-32">
-               <section id="packs" className="pt-10">
-                  <div className="text-center mb-16">
-                     <div className="flex justify-center mb-6">
-                       <div className="p-4 rounded-full bg-[#ff0055]/10 border border-[#ff0055]/20 shadow-[0_0_30px_rgba(255,0,85,0.2)]">
-                          <FolderArchive className="text-[#ff0055]" size={40} />
-                       </div>
-                    </div>
-                    <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white mb-4">
-                      Professional <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff0055] to-purple-600">DJ Pools </span>
-                    </h2>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                    {poolData.map((pool) => (
-                      <button 
-                        key={pool.name} 
-                        onClick={() => handleGenreSelect(pool.name)} 
-                        className={`aspect-square bg-[#0a0a0a] border rounded-3xl flex items-center justify-center relative overflow-hidden group transition-all duration-300 shadow-2xl hover:scale-105 ${selectedGenre === pool.name ? 'border-[#ff0055] ring-2 ring-[#ff0055]/50' : 'border-white/10 hover:border-[#ff0055]'}`}
-                      >
-                        <img src={pool.img} alt={pool.name} className="w-full h-full object-cover transition-transform duration-500" />
-                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-colors" />
-                      </button>
-                    ))}
-                  </div>
-               </section>
-
                <Trends onToggleCrate={toggleCrate} crate={crate} />
-
-               <section id="latest">
-                  <div className="text-center mb-10">
-                     <h3 className="text-3xl font-black uppercase italic tracking-tighter text-white">Latest <span className="text-[#ff0055]">Drops</span></h3>
-                  </div>
+               
+               <section id="latest" className="scroll-mt-32">
                   <LatestUploads 
-                    tracks={realTracks.filter(t => !selectedGenre || t.pool_origin === selectedGenre)}  
+                    tracks={currentTracksPage}  
                     selectedGenre={selectedGenre} 
                     onGenreSelect={handleGenreSelect} 
                     onToggleCrate={toggleCrate} 
@@ -226,46 +215,70 @@ export default function App() {
                     currentTrack={currentTrack} 
                     isPlaying={isPlaying} 
                   />
+
+                  {/* PAGINACIÓN NUMERADA */}
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2 mt-16 pb-10">
+                      <button 
+                        disabled={currentPage === 1}
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        className="p-2.5 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white disabled:opacity-20 transition-all mr-2"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        if (
+                          page === 1 || 
+                          page === totalPages || 
+                          (page >= currentPage - 1 && page <= currentPage + 1)
+                        ) {
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              className={`w-10 h-10 rounded-xl font-black text-[11px] transition-all duration-300 ${
+                                currentPage === page 
+                                  ? 'bg-[#ff0055] text-white shadow-[0_0_20px_rgba(255,0,85,0.4)]' 
+                                  : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white border border-white/5'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        }
+                        if (page === currentPage - 2 || page === currentPage + 2) {
+                          return <span key={page} className="text-gray-600 px-1">...</span>;
+                        }
+                        return null;
+                      })}
+
+                      <button 
+                        disabled={currentPage === totalPages}
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        className="p-2.5 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white disabled:opacity-20 transition-all ml-2"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
+                  )}
                </section>
                
                <div id="charts" className="bg-[#0a0a0a] rounded-3xl border border-white/5 p-8">
                   <Charts user={user} />
                </div>
-
-               <section id="retro" className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-black p-10 rounded-3xl border border-white/10 group cursor-pointer hover:border-[#ff0055]/50 transition-all">
-                    <div className="relative z-10">
-                      <h3 className="text-3xl font-black uppercase italic mb-2 group-hover:text-[#ff0055] transition-colors">DJ Tools</h3>
-                      <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Acapellas • Transitions • Edits</p>
-                    </div>
-                    <Zap size={100} className="absolute -right-6 -bottom-6 text-white/5 group-hover:text-[#ff0055]/10 transition-colors" />
-                  </div>
-                  <div className="relative overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-black p-10 rounded-3xl border border-white/10 group cursor-pointer hover:border-blue-500/50 transition-all">
-                    <div className="relative z-10">
-                      <h3 className="text-3xl font-black uppercase italic mb-2 group-hover:text-blue-500 transition-colors">Retro Vault</h3>
-                      <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">70s • 80s • 90s • 00s Classics</p>
-                    </div>
-                    <History size={100} className="absolute -right-6 -bottom-6 text-white/5 group-hover:text-blue-500/10 transition-colors" />
-                  </div>
-               </section>
              </div>
            )}
         </div>
       </main>
 
-      {crate.length > 0 && (
-        <button className="fixed right-8 bottom-32 z-40 p-4 rounded-full bg-[#ff0055] shadow-lg flex items-center gap-2 hover:scale-110 transition-all">
-          <Backpack size={20} /><span className="font-bold text-xs">{crate.length}</span>
-        </button>
-      )}
-
       <Footer />
 
       {currentTrack && (
         <AudioPlayer 
-            url={currentTrack.streamUrl} 
+            url={currentTrack.streamUrl || ''} 
             title={currentTrack.title || currentTrack.filename} 
-            artist={currentTrack.artist || currentTrack.pool_origin}
+            artist={currentTrack.artist || currentTrack.pool_origin || 'Unknown'}
             isPlaying={isPlaying} 
             onTogglePlay={() => setIsPlaying(!isPlaying)} 
         />
