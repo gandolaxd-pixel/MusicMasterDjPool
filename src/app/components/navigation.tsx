@@ -26,12 +26,13 @@ export function Navigation({ user, onSearch, onGoHome, onGoPools }: {
     onSearch(searchTerm);
   };
 
+  // REORDENADO: Home / Latest Uploads / DJ Pools / DJ Packs / Vault Retro
   const links = [
     { name: 'Home', onClick: onGoHome },
-    { name: 'DJ Pools', onClick: onGoPools },
     { name: 'Latest Uploads', href: '#latest' },
-    { name: 'DJ Packs', href: '#charts' }, // CAMBIADO: Antes era 'Top Charts'
-    { name: 'Retro Vault', href: '#retro' },
+    { name: 'DJ Pools', onClick: onGoPools },
+    { name: 'DJ Packs', href: '#charts' },
+    { name: 'Vault Retro', href: '#retro' },
   ];
 
   return (
