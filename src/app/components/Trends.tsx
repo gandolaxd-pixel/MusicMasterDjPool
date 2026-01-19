@@ -1,4 +1,5 @@
-import { Play, Heart, Flame } from 'lucide-react';
+import React from 'react';
+import { Zap, Disc, ArrowRight } from 'lucide-react';
 
 interface TrendsProps {
   onToggleCrate: (track: any) => void;
@@ -8,108 +9,75 @@ interface TrendsProps {
 export function Trends({ onToggleCrate, crate }: TrendsProps) {
   
   const trendingPicks = [
-    { 
-      id: 101, 
-      title: "Tech House Essentials", 
-      subtitle: "DJ Selection", 
-      tag: "HOT", 
-      bg: "from-purple-900 to-black",
-      img: "https://images.unsplash.com/photo-1571266028243-371695039980?auto=format&fit=crop&q=80&w=800"
-    },
-    { 
-      id: 102, 
-      title: "Melodic Techno Peaks", 
-      subtitle: "Afterlife Style", 
-      tag: "TRENDING", 
-      bg: "from-blue-900 to-black",
-      img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=800"
-    },
-    { 
-      id: 103, 
-      title: "Afro House Rituals", 
-      subtitle: "Tribal Beats", 
-      tag: "NEW", 
-      bg: "from-orange-900 to-black",
-      img: "https://images.unsplash.com/photo-1514525253440-b393452e3383?auto=format&fit=crop&q=80&w=800"
-    },
-    { 
-      id: 104, 
-      title: "Latin Mainstage", 
-      subtitle: "Festival Season", 
-      tag: "VIRAL", 
-      bg: "from-red-900 to-black",
-      img: "https://images.unsplash.com/photo-1533174072545-e8d4aa97edf9?auto=format&fit=crop&q=80&w=800"
-    }
+    { id: 101, title: "Tech House Essentials", subtitle: "DJ Selection", tag: "HOT" },
+    { id: 102, title: "Melodic Techno Peaks", subtitle: "Afterlife Style", tag: "TRENDING" },
+    { id: 103, title: "Afro House Rituals", subtitle: "Tribal Beats", tag: "NEW" },
+    { id: 104, title: "Latin Mainstage", subtitle: "Festival Season", tag: "VIRAL" }
   ];
 
+  // Duplicamos el array para que el efecto infinito no tenga saltos
+  const marqueeItems = [...trendingPicks, ...trendingPicks];
+
   return (
-    // CAMBIO: Cambiado de '-mt-10' a 'mt-10' para bajar la sección
-    <section className="relative z-10 mt-10 mb-16 px-4">
-      <div className="max-w-7xl mx-auto">
-        
-        {/* Título de Sección */}
-        <div className="flex items-center gap-3 mb-8">
-          <Flame className="text-[#ff0055]" size={28} />
-          <h2 className="text-3xl font-black uppercase italic tracking-tighter text-white">
-            Hot <span className="text-[#ff0055]">Picks</span>
-          </h2>
+    <section className="relative w-full bg-[#0a0a0a] border-y border-white/5 py-3 overflow-hidden mt-10 mb-10">
+      
+      {/* Etiqueta fija "LIVE" a la izquierda */}
+      <div className="absolute left-0 top-0 bottom-0 z-20 bg-[#0a0a0a] flex items-center px-6 border-r border-white/10 shadow-[20px_0_40px_rgba(0,0,0,0.9)]">
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff0055] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff0055]"></span>
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Hot Picks</span>
         </div>
+      </div>
 
-        {/* Grid de Tarjetas */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {trendingPicks.map((item) => (
+      {/* Contenedor de la Animación */}
+      <div className="flex no-scrollbar overflow-hidden select-none">
+        <div className="flex animate-marquee whitespace-nowrap items-center gap-16 pl-44">
+          {marqueeItems.map((item, index) => (
             <div 
-              key={item.id}
-              className="group relative h-64 w-full rounded-2xl overflow-hidden border border-white/10 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:border-[#ff0055]/50 shadow-lg"
+              key={`${item.id}-${index}`}
+              className="group flex items-center gap-6 cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
             >
-              {/* Imagen de Fondo */}
-              <img 
-                src={item.img} 
-                alt={item.title} 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-60 group-hover:opacity-40"
-              />
-              
-              <div className={`absolute inset-0 bg-gradient-to-t ${item.bg} opacity-80 mix-blend-multiply`} />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
+              {/* Tag pequeño estilo neón */}
+              <span className="text-[8px] font-black text-[#ff0055] border border-[#ff0055]/30 bg-[#ff0055]/5 px-2 py-0.5 rounded uppercase tracking-tighter">
+                {item.tag}
+              </span>
 
-              {/* Contenido */}
-              <div className="absolute inset-0 p-6 flex flex-col justify-between">
-                
-                {/* Cabecera */}
-                <div className="flex justify-between items-start">
-                  <span className="px-3 py-1 bg-[#ff0055] text-white text-[10px] font-black uppercase tracking-widest rounded-md shadow-[0_0_10px_rgba(255,0,85,0.4)]">
-                    {item.tag}
-                  </span>
-                  
-                  <button className="p-2.5 rounded-full bg-black/20 backdrop-blur-md hover:bg-[#ff0055] transition-colors text-white">
-                    <Heart size={16} />
-                  </button>
-                </div>
-
-                {/* Pie */}
-                <div>
-                  <h3 className="text-2xl font-black uppercase italic leading-none mb-2 text-white group-hover:text-[#ff0055] transition-colors drop-shadow-lg">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4">
-                    {item.subtitle}
-                  </p>
-                  
-                  {/* Botón Play */}
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
-                    <button className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white">
-                      <div className="w-8 h-8 rounded-full bg-[#ff0055] flex items-center justify-center shadow-lg">
-                        <Play size={12} fill="currentColor" />
-                      </div>
-                      Play Now
-                    </button>
-                  </div>
-                </div>
+              {/* Texto del Track */}
+              <div className="flex items-baseline gap-3">
+                <h3 className="text-sm font-black uppercase italic tracking-tighter text-white group-hover:text-[#ff0055] transition-colors">
+                  {item.title}
+                </h3>
+                <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
+                  {item.subtitle}
+                </span>
               </div>
+
+              {/* Separador visual */}
+              <Disc size={14} className="text-white/10 group-hover:text-[#ff0055] group-hover:animate-spin-slow transition-colors" />
             </div>
           ))}
         </div>
       </div>
+
+      {/* Inyección de CSS para la animación */}
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 40s linear infinite;
+        }
+        .animate-marquee:hover {
+          animation-play-state: paused;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </section>
   );
 }
