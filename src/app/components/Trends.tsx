@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Disc, ArrowRight } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 interface TrendsProps {
   onToggleCrate: (track: any) => void;
@@ -9,73 +9,96 @@ interface TrendsProps {
 export function Trends({ onToggleCrate, crate }: TrendsProps) {
   
   const trendingPicks = [
-    { id: 101, title: "Tech House Essentials", subtitle: "DJ Selection", tag: "HOT" },
-    { id: 102, title: "Melodic Techno Peaks", subtitle: "Afterlife Style", tag: "TRENDING" },
-    { id: 103, title: "Afro House Rituals", subtitle: "Tribal Beats", tag: "NEW" },
-    { id: 104, title: "Latin Mainstage", subtitle: "Festival Season", tag: "VIRAL" }
+    { 
+      id: 101, 
+      title: "Tech House Essentials", 
+      artist: "DJ Selection", 
+      tag: "HOT", 
+      img: "https://images.unsplash.com/photo-1571266028243-371695039980?auto=format&fit=crop&q=80&w=200"
+    },
+    { 
+      id: 102, 
+      title: "Melodic Techno Peaks", 
+      artist: "Afterlife Style", 
+      tag: "TRENDING", 
+      img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&q=80&w=200"
+    },
+    { 
+      id: 103, 
+      title: "Afro House Rituals", 
+      artist: "Tribal Beats", 
+      tag: "NEW", 
+      img: "https://images.unsplash.com/photo-1514525253440-b393452e3383?auto=format&fit=crop&q=80&w=200"
+    },
+    { 
+      id: 104, 
+      title: "Latin Mainstage", 
+      artist: "Festival Season", 
+      tag: "VIRAL", 
+      img: "https://images.unsplash.com/photo-1533174072545-e8d4aa97edf9?auto=format&fit=crop&q=80&w=200"
+    }
   ];
 
-  // Duplicamos el array para que el efecto infinito no tenga saltos
-  const marqueeItems = [...trendingPicks, ...trendingPicks];
+  const marqueeItems = [...trendingPicks, ...trendingPicks, ...trendingPicks];
 
   return (
-    <section className="relative w-full bg-[#0a0a0a] border-y border-white/5 py-3 overflow-hidden mt-10 mb-10">
+    <section className="relative w-full bg-[#080808] border-y border-white/5 py-6 overflow-hidden mt-10 mb-10">
       
-      {/* Etiqueta fija "LIVE" a la izquierda */}
-      <div className="absolute left-0 top-0 bottom-0 z-20 bg-[#0a0a0a] flex items-center px-6 border-r border-white/10 shadow-[20px_0_40px_rgba(0,0,0,0.9)]">
+      {/* Indicador de sección fijo */}
+      <div className="absolute left-0 top-0 bottom-0 z-20 bg-[#080808]/90 backdrop-blur-md flex items-center px-8 border-r border-white/10 shadow-[20px_0_40px_rgba(0,0,0,0.8)]">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff0055] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff0055]"></span>
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Hot Picks</span>
+          <Zap size={16} className="text-[#ff0055] fill-[#ff0055] animate-pulse" />
+          <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white">Hot Picks</span>
         </div>
       </div>
 
-      {/* Contenedor de la Animación */}
-      <div className="flex no-scrollbar overflow-hidden select-none">
-        <div className="flex animate-marquee whitespace-nowrap items-center gap-16 pl-44">
+      {/* Contenedor del movimiento */}
+      <div className="flex overflow-hidden">
+        <div className="flex animate-marquee items-center gap-16 pl-52">
           {marqueeItems.map((item, index) => (
             <div 
               key={`${item.id}-${index}`}
-              className="group flex items-center gap-6 cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
+              className="group flex items-center gap-5 cursor-pointer"
             >
-              {/* Tag pequeño estilo neón */}
-              <span className="text-[8px] font-black text-[#ff0055] border border-[#ff0055]/30 bg-[#ff0055]/5 px-2 py-0.5 rounded uppercase tracking-tighter">
-                {item.tag}
-              </span>
-
-              {/* Texto del Track */}
-              <div className="flex items-baseline gap-3">
-                <h3 className="text-sm font-black uppercase italic tracking-tighter text-white group-hover:text-[#ff0055] transition-colors">
-                  {item.title}
-                </h3>
-                <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
-                  {item.subtitle}
-                </span>
+              {/* Esfera con Imagen */}
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-[#ff0055] transition-all duration-500 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+                  <img 
+                    src={item.img} 
+                    alt={item.title} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                </div>
+                {/* Badge de Tag sobre la esfera */}
+                <div className="absolute -top-1 -right-1 bg-[#ff0055] text-[7px] font-black px-1.5 py-0.5 rounded-full text-white shadow-lg">
+                  {item.tag}
+                </div>
               </div>
 
-              {/* Separador visual */}
-              <Disc size={14} className="text-white/10 group-hover:text-[#ff0055] group-hover:animate-spin-slow transition-colors" />
+              {/* Información de la canción */}
+              <div className="flex flex-col min-w-[150px]">
+                <h3 className="text-sm font-black uppercase italic tracking-tighter text-white group-hover:text-[#ff0055] transition-colors leading-tight">
+                  {item.title}
+                </h3>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                  {item.artist}
+                </p>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Inyección de CSS para la animación */}
       <style>{`
         @keyframes marquee {
           0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
+          100% { transform: translateX(-33.33%); }
         }
         .animate-marquee {
-          animation: marquee 40s linear infinite;
+          animation: marquee 35s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
         }
       `}</style>
     </section>
