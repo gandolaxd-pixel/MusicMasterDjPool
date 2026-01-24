@@ -1,4 +1,4 @@
-// src/App.tsx - EDITADO PARA PAGINACIÓN MASIVA
+// src/App.tsx - VERSIÓN FINAL OPTIMIZADA
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabase'; 
 import { API_URL } from '../../config';
@@ -12,6 +12,8 @@ import { AudioPlayer } from './AudioPlayer';
 import { Trends } from './Trends'; 
 import { AuthForm } from './AuthForm'; 
 import PoolGrid from './PoolGrid';
+// ✅ IMPORTANTE: Asegúrate de que el archivo en tu Mac se llame DjPacks.tsx o DJPacks.tsx 
+// y que esta línea coincida exactamente.
 import DJPacks from './DjPacks'; 
 
 import { FolderArchive, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -32,7 +34,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<'home' | 'search' | 'pools' | 'packs'>('home');
   
-  // ✅ ESTADO DE PAGINACIÓN DE API
+  // ✅ ESTADOS PARA EL CATÁLOGO DEL VPS (343K CANCIONES)
   const [serverTracks, setServerTracks] = useState<Track[]>([]);
   const [serverPage, setServerPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -45,14 +47,17 @@ export default function App() {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // ✅ FUNCIÓN PARA BUSCAR EN EL VPS (CATÁLOGO DE 343K)
+  // ✅ FETCH DESDE EL SERVIDOR CLOUDFLARE
   const fetchFromServer = async (query: string, page: number) => {
     try {
       const resp = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(query)}&page=${page}`);
       const data = await resp.json();
       
-      // Si es la página 1, reemplazamos. Si no, acumulamos.
-      setServerTracks(prev => page === 1 ? data.tracks : [...prev, data.tracks]);
+      if (page === 1) {
+        setServerTracks(data.tracks);
+      } else {
+        setServerTracks(prev => [...prev, ...data.tracks]);
+      }
       setHasMore(data.hasMore);
       setTotalServerTracks(data.total);
     } catch (e) {
@@ -60,7 +65,6 @@ export default function App() {
     }
   };
 
-  // ✅ MANEJO DE BÚSQUEDA REAL TIEMPO
   const handleSearch = (term: string) => {
     setSearchTerm(term);
     setServerPage(1);
@@ -94,7 +98,6 @@ export default function App() {
     if (currentTrack && (currentTrack.id === track.id || currentTrack.title === track.title)) {
       setIsPlaying(!isPlaying); 
     } else {
-      // ✅ FIX: Ruta de stream directa al VPS
       const path = track.file_path || track.filename;
       const streamUrl = `${API_URL}/api/stream?path=${encodeURIComponent(path)}`;
       setCurrentTrack({ ...track, streamUrl });
@@ -112,10 +115,7 @@ export default function App() {
 
   const handleGenreSelect = (genreName: string | null) => {
     setSelectedGenre(prev => prev === genreName ? null : genreName);
-    setServerPage(1);
     if (currentView !== 'home') setCurrentView('home');
-    // Si hay un género seleccionado, también podríamos filtrar en servidor, 
-    // pero de momento lo dejamos local para "Latest Uploads"
   };
 
   useEffect(() => {
@@ -129,7 +129,6 @@ export default function App() {
         }
       } catch (error) { if (mounted) setLoading(false); }
       
-      // Cargar los últimos 200 de Supabase para la Home
       const { data } = await supabase.from('tracks').select('*').order('created_at', { ascending: false }).limit(200);
       if (data && mounted) setRealTracks(data as Track[]);
     };
@@ -161,11 +160,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#050505] font-sans text-white antialiased relative selection:bg-[#ff0055] selection:text-white">
-      <Navigation user={user} currentView={currentView} onSearch={handleSearch} onGoHome={goHome} onGoPools={goToPools} onGoPacks={goToPacks} />
+      <Navigation 
+        user={user} 
+        currentView={currentView} 
+        onSearch={handleSearch} 
+        onGoHome={goHome} 
+        onGoPools={goToPools} 
+        onGoPacks={goToPacks} 
+      />
       
       <main className="pt-32 pb-40">
         <div className="max-w-7xl mx-auto px-4">
            
+           {/* SECCIÓN DE BÚSQUEDA */}
            {currentView === 'search' && (
              <section className="space-y-12 animate-in fade-in duration-500">
                 <div className="flex items-center justify-between border-b border-white/10 pb-8">
@@ -175,10 +182,8 @@ export default function App() {
                   </h2>
                   <button onClick={goHome} className="text-xs font-bold text-gray-500 hover:text-white uppercase tracking-widest border border-white/10 px-4 py-2 rounded-full">← Back</button>
                 </div>
-                {/* ✅ USAMOS serverTracks PARA LA BÚSQUEDA */}
                 <LatestUploads tracks={serverTracks} selectedGenre={null} onGenreSelect={() => {}} onToggleCrate={toggleCrate} crate={crate} user={user} onPlay={handlePlay} currentTrack={currentTrack} isPlaying={isPlaying} />
                 
-                {/* Paginador de búsqueda */}
                 {hasMore && (
                     <button onClick={() => handlePageChange(serverPage + 1)} className="mx-auto block bg-white/5 border border-white/10 px-8 py-3 rounded-full hover:bg-[#ff0055] transition-all font-bold uppercase text-xs tracking-widest">
                         Load More Results
@@ -187,32 +192,40 @@ export default function App() {
              </section>
            )}
 
+           {/* SECCIÓN HOME */}
            {currentView === 'home' && (
              <div className="space-y-32">
                <Trends onToggleCrate={toggleCrate} crate={crate} />
                <section id="latest" className="scroll-mt-32">
-                  {/* Para la home usamos realTracks (Supabase) con su paginación local original si quieres */}
                   <LatestUploads tracks={realTracks.slice(0, 20)} selectedGenre={selectedGenre} onGenreSelect={handleGenreSelect} onToggleCrate={toggleCrate} crate={crate} user={user} onPlay={handlePlay} currentTrack={currentTrack} isPlaying={isPlaying} />
                </section>
                <div id="charts" className="bg-[#0a0a0a] rounded-3xl border border-white/5 p-8"><Charts user={user} /></div>
              </div>
            )}
 
-           {/* Mantienes pools y packs igual, ya que ellos llaman internamente a la API */}
-           {currentView === 'pools' && <PoolGrid />}
+           {/* SECCIÓN POOLS - Limpia y separada */}
+           {currentView === 'pools' && (
+             <div className="animate-in fade-in duration-700">
+               <PoolGrid />
+             </div>
+           )}
+
+           {/* SECCIÓN PACKS - Conexión directa al VPS */}
            {currentView === 'packs' && (
-              <DJPacks 
-                user={user} 
-                isPlaying={isPlaying} 
-                currentTrack={currentTrack} 
-                onPlay={(t) => handlePlay({
-                  ...t, 
-                  id: t.id || t.name, 
-                  title: t.name, 
-                  file_path: t.server_path,
-                  created_at: new Date().toISOString()
-                } as Track)} 
-              />
+             <div className="animate-in fade-in duration-700">
+                <DJPacks 
+                  user={user} 
+                  isPlaying={isPlaying} 
+                  currentTrack={currentTrack} 
+                  onPlay={(t: any) => handlePlay({
+                    ...t, 
+                    id: t.id || t.name, 
+                    title: t.name, 
+                    file_path: t.server_path,
+                    created_at: new Date().toISOString()
+                  } as Track)} 
+                />
+             </div>
            )}
         </div>
       </main>

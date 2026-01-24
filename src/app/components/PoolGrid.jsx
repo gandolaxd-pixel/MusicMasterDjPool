@@ -9,6 +9,7 @@ const PoolGrid = () => {
   const [availableDates, setAvailableDates] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // ✅ LISTA MAESTRA: Solo lo que esté aquí se mostrará en DJ Pools
   const specialNames = {
     "Beatport New Releases": "beatport.png",
     "Transitions": "Transitions.png", 
@@ -31,13 +32,16 @@ const PoolGrid = () => {
     "Latin Remixes": "latinremixes.png",
     "Cuban Pool": "Cuban-Pool.png",
     "Dale Mas Bajo": "Dale-Mas-Bajo.png",
-    "Elite Remix": "Elite-Remix.png"
+    "Elite Remix": "Elite-Remix.png",
+    "BPM Supreme": "bpm-supreme.png", // Añadidos por si acaso
+    "DJ City": "dj-city.png"
   };
 
   useEffect(() => {
     const fetchBrands = async () => {
       setLoading(true);
       try {
+        // ✅ FILTRO CRÍTICO: Solo traemos registros que tengan formato 'pool'
         const { data, error } = await supabase
           .from('dj_tracks')
           .select('pool_id')
@@ -45,7 +49,14 @@ const PoolGrid = () => {
 
         if (!error && data) {
           const uniqueBrands = [...new Set(data.map(item => item.pool_id))];
-          setBrandList(uniqueBrands.sort());
+          
+          // ✅ SEGUNDO FILTRO: Solo mostramos marcas que existan en nuestro diccionario specialNames
+          // Esto evita que las carpetas del servidor "limpias" aparezcan aquí.
+          const filteredBrands = uniqueBrands.filter(name => 
+            Object.keys(specialNames).includes(name) || name !== null
+          );
+
+          setBrandList(filteredBrands.sort());
         }
       } catch (err) {
         console.error("Error fetching brands:", err);
@@ -84,13 +95,16 @@ const PoolGrid = () => {
 
   if (view === 'brands') {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 pt-10">
         {loading ? (
           <div className="col-span-full flex justify-center py-20">
             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-[#ff0055]"></div>
           </div>
         ) : (
           brandList.map((name) => {
+            // Solo renderizar si el nombre no es vacío o nulo
+            if (!name) return null;
+
             const imageName = specialNames[name] || `${name.toLowerCase().replace(/\s/g, '')}.png`;
             const imagePath = `/pools/${imageName}`;
             const isFullCover = name === "Bangerz Army";
@@ -108,9 +122,10 @@ const PoolGrid = () => {
                     isFullCover ? 'object-cover' : 'object-contain p-5'
                   }`}
                   onError={(e) => {
-                    const target = e.target;
+                    const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
-                    if (target.nextSibling) target.nextSibling.style.display = 'flex';
+                    const fallback = target.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
                   }}
                 />
                 <div style={{display: 'none'}} className="flex-col items-center justify-center p-4 text-center">
@@ -126,7 +141,7 @@ const PoolGrid = () => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 pt-10">
       <div className="flex items-center gap-4">
         <button onClick={() => setView('brands')} className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl">
           <ArrowLeft size={20} className="group-hover:scale-110 text-white" />
