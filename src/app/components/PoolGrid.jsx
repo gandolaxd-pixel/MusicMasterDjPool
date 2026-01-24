@@ -9,7 +9,6 @@ const PoolGrid = () => {
   const [availableDates, setAvailableDates] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ LISTA MAESTRA: Solo lo que esté aquí se mostrará en DJ Pools
   const specialNames = {
     "Beatport New Releases": "beatport.png",
     "Transitions": "Transitions.png", 
@@ -33,7 +32,7 @@ const PoolGrid = () => {
     "Cuban Pool": "Cuban-Pool.png",
     "Dale Mas Bajo": "Dale-Mas-Bajo.png",
     "Elite Remix": "Elite-Remix.png",
-    "BPM Supreme": "bpm-supreme.png", // Añadidos por si acaso
+    "BPM Supreme": "bpm-supreme.png",
     "DJ City": "dj-city.png"
   };
 
@@ -41,7 +40,6 @@ const PoolGrid = () => {
     const fetchBrands = async () => {
       setLoading(true);
       try {
-        // ✅ FILTRO CRÍTICO: Solo traemos registros que tengan formato 'pool'
         const { data, error } = await supabase
           .from('dj_tracks')
           .select('pool_id')
@@ -49,13 +47,9 @@ const PoolGrid = () => {
 
         if (!error && data) {
           const uniqueBrands = [...new Set(data.map(item => item.pool_id))];
-          
-          // ✅ SEGUNDO FILTRO: Solo mostramos marcas que existan en nuestro diccionario specialNames
-          // Esto evita que las carpetas del servidor "limpias" aparezcan aquí.
           const filteredBrands = uniqueBrands.filter(name => 
-            Object.keys(specialNames).includes(name) || name !== null
+            name && Object.keys(specialNames).includes(name)
           );
-
           setBrandList(filteredBrands.sort());
         }
       } catch (err) {
@@ -102,9 +96,7 @@ const PoolGrid = () => {
           </div>
         ) : (
           brandList.map((name) => {
-            // Solo renderizar si el nombre no es vacío o nulo
             if (!name) return null;
-
             const imageName = specialNames[name] || `${name.toLowerCase().replace(/\s/g, '')}.png`;
             const imagePath = `/pools/${imageName}`;
             const isFullCover = name === "Bangerz Army";
@@ -122,9 +114,8 @@ const PoolGrid = () => {
                     isFullCover ? 'object-cover' : 'object-contain p-5'
                   }`}
                   onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const fallback = target.nextElementSibling as HTMLElement;
+                    e.target.style.display = 'none';
+                    const fallback = e.target.nextElementSibling;
                     if (fallback) fallback.style.display = 'flex';
                   }}
                 />
