@@ -1,102 +1,79 @@
-import express from 'express';
-import SftpClient from 'ssh2-sftp-client';
-import cors from 'cors';
-import path from 'path'; // <--- 1. NUEVO IMPORT
-
-const config = {
-    host: 'u529624-sub1.your-storagebox.de',
-    username: 'u529624-sub1',
-    password: 'Gandola2026!', 
-    port: 23,
-    // Optimizaciones de conexión
-    readyTimeout: 20000, 
-    keepalive: 1000 
-};
+cat > ~/dj_dashboard/server.js <<EOF
+const express = require('express');
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+const axios = require('axios'); // NECESARIO PARA EL STREAMING SEGURO
 
 const app = express();
 app.use(cors());
+app.use(express.static('public'));
 
-// Guardamos una conexión global para reutilizarla
-let globalSftp = new SftpClient();
-let isConnected = false;
+// --- CREDENCIALES SECRETAS (Solo el servidor las conoce) ---
+const STORAGE_CONFIG = {
+    user: "u529624-sub1",
+    pass: "Gandola2026!", // ¡Aquí está segura! Nadie la ve en la web.
+    host: "u529624-sub1.your-storagebox.de"
+};
 
-async function connectSFTP() {
-    if (!isConnected) {
-        try {
-            console.log("🔌 Estableciendo conexión persistente con Hetzner...");
-            await globalSftp.connect(config);
-            isConnected = true;
-            console.log("⚡ Conexión lista.");
-        } catch (err) {
-            console.error("🔥 Error de conexión:", err.message);
-            isConnected = false;
-        }
-    }
-    return globalSftp;
+// --- CARGA DE BASE DE DATOS ---
+console.log("⏳ Cargando base de datos musical...");
+const dbPath = path.join(__dirname, 'tracks_master.json');
+let db = [];
+
+try {
+    const rawData = fs.readFileSync(dbPath, 'utf-8');
+    db = JSON.parse(rawData);
+    console.log(\`✅ ¡ÉXITO! \${db.length} archivos cargados en memoria.\`);
+} catch (error) {
+    console.error("❌ ERROR: No encuentro tracks_master.json");
 }
 
-// Mantener la conexión viva
-setInterval(async () => {
-    if (isConnected) {
-        try {
-            await globalSftp.list('/DJPOOLS'); // Ping silencioso
-        } catch (e) {
-            isConnected = false;
-        }
-    }
-}, 10000);
+// --- API 1: BUSCADOR ---
+app.get('/api/search', (req, res) => {
+    const query = req.query.q ? req.query.q.toLowerCase() : '';
+    if (query.length < 2) return res.json([]);
+    
+    const results = db.filter(item => 
+        item.name && item.name.toLowerCase().includes(query)
+    ).slice(0, 100);
 
-app.get('/stream', async (req, res) => {
-    const remotePath = req.query.path;
-    const isDownload = req.query.download === 'true'; // <--- 2. DETECTAMOS SI ES DESCARGA
+    res.json(results);
+});
 
-    if (!remotePath) return res.status(400).send('Falta path');
+// --- API 2: STREAMING SEGURO (LA MAGIA) 🛡️ ---
+app.get('/api/stream', async (req, res) => {
+    // 1. Recibimos la ruta del archivo (ej: /Musica/Techno/track.mp3)
+    const trackPath = req.query.path;
+    if (!trackPath) return res.status(400).send("Falta la ruta");
+
+    // 2. Construimos la URL secreta hacia Hetzner
+    // Codificamos la ruta para que los espacios y acentos no rompan el link
+    const encodedPath = trackPath.split('/').map(encodeURIComponent).join('/');
+    const secureUrl = \`https://\${STORAGE_CONFIG.user}:\${STORAGE_CONFIG.pass}@\${STORAGE_CONFIG.host}\${encodedPath}\`;
 
     try {
-        const sftp = await connectSFTP();
-
-        // 1. Obtenemos tamaño y nombre
-        const fileStats = await sftp.stat(remotePath);
-        const filename = path.basename(remotePath); // <--- Extraemos "cancion.mp3" de la ruta
-
-        // 2. Preparamos las cabeceras base
-        const headers = {
-            'Content-Type': 'audio/mpeg',
-            'Content-Length': fileStats.size
-        };
-
-        // 3. DECIDIMOS: ¿STREAMING O DESCARGA?
-        if (isDownload) {
-            // Esto obliga al navegador a bajar el archivo con su nombre original
-            headers['Content-Disposition'] = `attachment; filename="${filename}"`;
-        } else {
-            // Esto permite la reproducción en el navegador
-            headers['Content-Disposition'] = 'inline';
-            headers['Accept-Ranges'] = 'bytes';
-            headers['Cache-Control'] = 'no-cache';
-        }
-
-        res.writeHead(200, headers);
-
-        // 4. Enviamos el archivo
-        const stream = sftp.createReadStream(remotePath, {
-            highWaterMark: 64 * 1024 
+        // 3. El servidor pide el archivo a Hetzner
+        const response = await axios({
+            method: 'get',
+            url: secureUrl,
+            responseType: 'stream' // Importante: lo bajamos como flujo de datos
         });
 
-        stream.pipe(res);
+        // 4. Se lo pasamos al usuario (Pipe)
+        // Ponemos las cabeceras correctas para que sea un archivo de audio
+        res.setHeader('Content-Type', 'audio/mpeg');
+        response.data.pipe(res);
 
-        stream.on('error', (err) => {
-            console.error('Error en stream:', err.message);
-        });
-
-    } catch (err) {
-        console.error('❌ Error general:', err.message);
-        res.status(500).send('Error');
-        isConnected = false; // Forzamos reconexión la próxima vez
+    } catch (error) {
+        console.error("❌ Error al reproducir:", trackPath);
+        res.status(404).send("No se pudo acceder al archivo en la nube.");
     }
 });
 
-app.listen(3001, () => {
-    console.log(`🚀 SERVIDOR LISTO (Stream + Descargas) en http://localhost:3001`);
-    connectSFTP(); // Conectar nada más arrancar
+// --- ENCENDER ---
+const PORT = 3000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(\`\n🚀 SERVIDOR SEGURO ONLINE EN PUERTO \${PORT}\`);
 });
+EOF

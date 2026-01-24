@@ -84,7 +84,8 @@ export default function App() {
     if (currentTrack && (currentTrack.id === track.id || currentTrack.title === track.title)) {
       setIsPlaying(!isPlaying); 
     } else {
-      const streamUrl = track.streamUrl || `${API_URL}/stream?path=${encodeURIComponent(track.file_path)}`;
+      // ✅ FIX: Apuntamos correctamente a /api/stream
+      const streamUrl = track.streamUrl || `${API_URL}/api/stream?path=${encodeURIComponent(track.file_path)}`;
       setCurrentTrack({ ...track, streamUrl });
       setIsPlaying(true);
     }
@@ -192,7 +193,8 @@ export default function App() {
                       artist: 'Mastered Audio',
                       filename: packTrack.name,
                       file_path: packTrack.server_path,
-                      streamUrl: `https://u529624-sub1:Gandola2026!@u529624-sub1.your-storagebox.de${packTrack.server_path}`,
+                      // ✅ SEGURIDAD CRÍTICA: Usamos el túnel seguro del servidor
+                      streamUrl: `${API_URL}/api/stream?path=${encodeURIComponent(packTrack.server_path)}`,
                       created_at: new Date().toISOString()
                     };
                     handlePlay(trackToPlay);

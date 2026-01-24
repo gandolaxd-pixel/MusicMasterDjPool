@@ -46,21 +46,35 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
   const onTimeUpdate = () => {
     if (!audioRef.current) return;
     const current = audioRef.current.currentTime;
-    const total = audioRef.current.duration || 0;
+    const total = audioRef.current.duration;
+    
+    // Verificamos que 'total' sea un número finito válido
+    const validDuration = Number.isFinite(total) ? total : 0;
+
     setCurrentTime(current);
-    setDuration(total);
-    setProgress(total ? (current / total) * 100 : 0);
+    setDuration(validDuration);
+    setProgress(validDuration ? (current / validDuration) * 100 : 0);
   };
 
+  // 🛡️ CORRECCIÓN CRÍTICA AQUÍ: Blindaje contra errores de 'Non-Finite'
   const seek = (clientX: number) => {
-    if (!audioRef.current || !barRef.current || !duration) return;
+    // 1. Si no hay audio, o la duración no es válida (NaN o Infinita), NO hacemos nada.
+    if (!audioRef.current || !barRef.current || !Number.isFinite(duration) || duration <= 0) return;
+
     const rect = barRef.current.getBoundingClientRect();
+    if (rect.width === 0) return; // Evitar división por cero
+
     const percent = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
-    audioRef.current.currentTime = percent * duration;
+    const newTime = percent * duration;
+
+    // 2. Comprobación final antes de aplicar el tiempo
+    if (Number.isFinite(newTime)) {
+        audioRef.current.currentTime = newTime;
+    }
   };
 
   const formatTime = (time: number) => {
-    if(!time) return "0:00";
+    if(!time || !Number.isFinite(time)) return "0:00";
     const m = Math.floor(time / 60);
     const s = Math.floor(time % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
@@ -70,7 +84,14 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4">
-      <audio ref={audioRef} src={url} onTimeUpdate={onTimeUpdate} onEnded={() => onTogglePlay()} crossOrigin="anonymous" />
+      <audio 
+        ref={audioRef} 
+        src={url} 
+        onTimeUpdate={onTimeUpdate} 
+        onEnded={() => onTogglePlay()} 
+        crossOrigin="anonymous" 
+        onError={(e) => console.error("Audio Load Error:", e)} // Log extra para ver errores
+      />
 
       <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="max-w-7xl mx-auto bg-black/95 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
         <div className="flex items-center gap-4 md:gap-6">
@@ -107,7 +128,6 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
             <span className="text-[9px] font-mono text-gray-400 w-8 hidden sm:block">{formatTime(duration)}</span>
           </div>
 
-          {/* 🛠️ MODIFICACIÓN: Volumen FIJO y SIEMPRE VISIBLE */}
           <div className="flex items-center gap-4 border-l border-white/10 pl-4">
             <div className="hidden lg:flex items-center gap-3">
                 <button onClick={toggleMute} className="text-gray-400 hover:text-white transition-colors">
