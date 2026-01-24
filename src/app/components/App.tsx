@@ -12,7 +12,7 @@ import { AudioPlayer } from './AudioPlayer';
 import { Trends } from './Trends'; 
 import { AuthForm } from './AuthForm'; 
 import PoolGrid from './PoolGrid';
-import DJPacks from './DJPacks'; 
+import DJPacks from './DjPacks'; 
 
 import { FolderArchive, ChevronLeft, ChevronRight } from 'lucide-react';
 
