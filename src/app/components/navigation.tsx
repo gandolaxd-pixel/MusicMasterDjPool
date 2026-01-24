@@ -3,11 +3,14 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabase';
 
-export function Navigation({ user, onSearch, onGoHome, onGoPools }: { 
+// 👇 1. AÑADIMOS 'currentView' A LAS PROPS
+export function Navigation({ user, currentView, onSearch, onGoHome, onGoPools, onGoPacks }: { 
   user: any, 
+  currentView: string, // <--- Nueva propiedad para saber dónde estamos
   onSearch: (term: string) => void,
   onGoHome: () => void,
-  onGoPools: () => void 
+  onGoPools: () => void,
+  onGoPacks: () => void 
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -26,20 +29,20 @@ export function Navigation({ user, onSearch, onGoHome, onGoPools }: {
     onSearch(searchTerm);
   };
 
-  // REORDENADO: Home / Latest Uploads / DJ Pools / DJ Packs / Vault Retro
+  // 👇 2. DEFINIMOS LOS LINKS CON UN ID PARA IDENTIFICARLOS
   const links = [
-    { name: 'Home', onClick: onGoHome },
-    { name: 'Latest Uploads', href: '#latest' },
-    { name: 'DJ Pools', onClick: onGoPools },
-    { name: 'DJ Packs', href: '#charts' },
-    { name: 'Vault Retro', href: '#retro' },
+    { id: 'home', name: 'Home', onClick: onGoHome },
+    { id: 'latest', name: 'Latest Uploads', href: '#latest' }, // Este sigue siendo un anchor
+    { id: 'pools', name: 'DJ Pools', onClick: onGoPools },
+    { id: 'packs', name: 'DJ Packs', onClick: onGoPacks },
+    { id: 'retro', name: 'Vault Retro', href: '#retro' },
   ];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[60] bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 h-20">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
         
-        {/* IZQUIERDA: Logo + Enlaces */}
+        {/* IZQUIERDA */}
         <div className="flex items-center gap-10">
           <div 
             onClick={onGoHome}
@@ -54,12 +57,22 @@ export function Navigation({ user, onSearch, onGoHome, onGoPools }: {
           </div>
           
           <div className="hidden lg:flex items-center gap-8">
-            {links.map(l => (
-              l.onClick ? (
+            {links.map(l => {
+              // 👇 3. LÓGICA DEL CÍRCULO ROJO (ACTIVO)
+              const isActive = currentView === l.id;
+              
+              // Estilo base
+              const baseStyle = "text-xs font-bold uppercase tracking-widest transition-all duration-300";
+              // Estilo Activo (Círculo Rojo) vs Inactivo
+              const activeStyle = isActive 
+                ? "text-[#ff0055] border border-[#ff0055] px-4 py-1.5 rounded-full bg-[#ff0055]/10 shadow-[0_0_10px_rgba(255,0,85,0.2)]" 
+                : "text-gray-400 hover:text-white";
+
+              return l.onClick ? (
                 <button 
                   key={l.name} 
                   onClick={l.onClick}
-                  className="text-xs font-bold text-gray-400 hover:text-[#ff0055] uppercase tracking-widest transition-all duration-300"
+                  className={`${baseStyle} ${activeStyle}`}
                 >
                   {l.name}
                 </button>
@@ -67,16 +80,16 @@ export function Navigation({ user, onSearch, onGoHome, onGoPools }: {
                 <a 
                   key={l.name} 
                   href={l.href} 
-                  className="text-xs font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-all duration-300"
+                  className={`${baseStyle} ${activeStyle}`}
                 >
                   {l.name}
                 </a>
-              )
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* DERECHA: Buscador + Menú Usuario */}
+        {/* DERECHA (Sin cambios) */}
         <div className="flex items-center gap-6">
           <div 
             className="relative flex items-center"

@@ -9,7 +9,6 @@ const PoolGrid = () => {
   const [availableDates, setAvailableDates] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 🛠️ MAPEADO FINAL (Coincidencia exacta con tus archivos en /public/pools/)
   const specialNames = {
     "Beatport New Releases": "beatport.png",
     "Transitions": "Transitions.png", 
@@ -38,10 +37,18 @@ const PoolGrid = () => {
   useEffect(() => {
     const fetchBrands = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from('dj_tracks').select('pool_id');
-      if (!error && data) {
-        const uniqueBrands = [...new Set(data.map(item => item.pool_id))];
-        setBrandList(uniqueBrands.sort());
+      try {
+        const { data, error } = await supabase
+          .from('dj_tracks')
+          .select('pool_id')
+          .eq('format', 'pool'); 
+
+        if (!error && data) {
+          const uniqueBrands = [...new Set(data.map(item => item.pool_id))];
+          setBrandList(uniqueBrands.sort());
+        }
+      } catch (err) {
+        console.error("Error fetching brands:", err);
       }
       setLoading(false);
     };
@@ -52,17 +59,22 @@ const PoolGrid = () => {
     if (view === 'dates' && selectedPool) {
       const fetchDates = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('dj_tracks')
-          .select('drop_month, drop_day')
-          .eq('pool_id', selectedPool)
-          .order('drop_day', { ascending: false });
+        try {
+          const { data, error } = await supabase
+            .from('dj_tracks')
+            .select('drop_month, drop_day')
+            .eq('pool_id', selectedPool)
+            .eq('format', 'pool')
+            .order('drop_day', { ascending: false });
 
-        if (!error && data) {
-          const uniqueDates = data.filter((v, i, a) => 
-            a.findIndex(t => (t.drop_day === v.drop_day && t.drop_month === v.drop_month)) === i
-          );
-          setAvailableDates(uniqueDates);
+          if (!error && data) {
+            const uniqueDates = data.filter((v, i, a) => 
+              a.findIndex(t => (t.drop_day === v.drop_day && t.drop_month === v.drop_month)) === i
+            );
+            setAvailableDates(uniqueDates);
+          }
+        } catch (err) {
+          console.error("Error fetching dates:", err);
         }
         setLoading(false);
       };
@@ -79,7 +91,6 @@ const PoolGrid = () => {
           </div>
         ) : (
           brandList.map((name) => {
-            // Buscamos primero en el mapeo especial, si no, generamos el nombre estándar
             const imageName = specialNames[name] || `${name.toLowerCase().replace(/\s/g, '')}.png`;
             const imagePath = `/pools/${imageName}`;
             const isFullCover = name === "Bangerz Army";
@@ -93,12 +104,13 @@ const PoolGrid = () => {
                 <img 
                   src={imagePath} 
                   alt={name} 
-                  className={`w-full h-full transition-all duration-500 opacity-70 group-hover:opacity-100 group-hover:scale-110 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] ${
+                  className={`w-full h-full transition-all duration-500 opacity-70 group-hover:opacity-100 group-hover:scale-110 ${
                     isFullCover ? 'object-cover' : 'object-contain p-5'
                   }`}
                   onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
+                    const target = e.target;
+                    target.style.display = 'none';
+                    if (target.nextSibling) target.nextSibling.style.display = 'flex';
                   }}
                 />
                 <div style={{display: 'none'}} className="flex-col items-center justify-center p-4 text-center">
@@ -117,9 +129,9 @@ const PoolGrid = () => {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center gap-4">
         <button onClick={() => setView('brands')} className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl">
-          <ArrowLeft size={20} className="group-hover:scale-110" />
+          <ArrowLeft size={20} className="group-hover:scale-110 text-white" />
         </button>
-        <h2 className="text-2xl font-black italic uppercase tracking-tighter">
+        <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
           <span className="text-[#ff0055]">{selectedPool}</span> Drops
         </h2>
       </div>
