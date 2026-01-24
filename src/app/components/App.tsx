@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabase'; 
 import { API_URL } from '../../config';
 
-import { Navigation } from './navigation';
+import { Navigation } from './NavigationMaster';
 import { Hero } from './hero';
 import { LatestUploads } from './LatestUploads';
 import { Footer } from './Footer';
