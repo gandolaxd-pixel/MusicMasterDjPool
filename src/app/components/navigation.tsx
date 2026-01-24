@@ -3,10 +3,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabase';
 
-// 👇 1. AÑADIMOS 'currentView' A LAS PROPS
 export function Navigation({ user, currentView, onSearch, onGoHome, onGoPools, onGoPacks }: { 
   user: any, 
-  currentView: string, // <--- Nueva propiedad para saber dónde estamos
+  currentView: string,
   onSearch: (term: string) => void,
   onGoHome: () => void,
   onGoPools: () => void,
@@ -29,59 +28,42 @@ export function Navigation({ user, currentView, onSearch, onGoHome, onGoPools, o
     onSearch(searchTerm);
   };
 
-  // 👇 2. DEFINIMOS LOS LINKS CON UN ID PARA IDENTIFICARLOS
   const links = [
     { id: 'home', name: 'Home', onClick: onGoHome },
-    { id: 'latest', name: 'Latest Uploads', href: '#latest' }, // Este sigue siendo un anchor
     { id: 'pools', name: 'DJ Pools', onClick: onGoPools },
-    { id: 'packs', name: 'DJ Packs', onClick: onGoPacks },
-    { id: 'retro', name: 'Vault Retro', href: '#retro' },
+    { id: 'packs', name: 'DJ Packs', onClick: onGoPacks }, // <--- ESTO ES LO QUE FALTA EN VERCEL
+    { id: 'latest', name: 'Latest Uploads', href: '#latest' },
+    { id: 'charts', name: 'Top Charts', href: '#charts' },
   ];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[60] bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 h-20">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
         
-        {/* IZQUIERDA */}
         <div className="flex items-center gap-10">
-          <div 
-            onClick={onGoHome}
-            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-          >
+          <div onClick={onGoHome} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="bg-[#ff0055] p-1.5 rounded-lg shadow-[0_0_15px_rgba(255,0,85,0.4)]">
                <Disc className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-black text-white italic tracking-tighter uppercase">
-              Music<span className="text-[#ff0055]">Master2.0</span>
+              Music<span className="text-[#ff0055]">Master</span>
             </span>
           </div>
           
           <div className="hidden lg:flex items-center gap-8">
             {links.map(l => {
-              // 👇 3. LÓGICA DEL CÍRCULO ROJO (ACTIVO)
               const isActive = currentView === l.id;
-              
-              // Estilo base
               const baseStyle = "text-xs font-bold uppercase tracking-widest transition-all duration-300";
-              // Estilo Activo (Círculo Rojo) vs Inactivo
               const activeStyle = isActive 
                 ? "text-[#ff0055] border border-[#ff0055] px-4 py-1.5 rounded-full bg-[#ff0055]/10 shadow-[0_0_10px_rgba(255,0,85,0.2)]" 
                 : "text-gray-400 hover:text-white";
 
               return l.onClick ? (
-                <button 
-                  key={l.name} 
-                  onClick={l.onClick}
-                  className={`${baseStyle} ${activeStyle}`}
-                >
+                <button key={l.name} onClick={l.onClick} className={`${baseStyle} ${activeStyle}`}>
                   {l.name}
                 </button>
               ) : (
-                <a 
-                  key={l.name} 
-                  href={l.href} 
-                  className={`${baseStyle} ${activeStyle}`}
-                >
+                <a key={l.name} href={l.href} className={`${baseStyle} ${activeStyle}`}>
                   {l.name}
                 </a>
               );
@@ -89,39 +71,18 @@ export function Navigation({ user, currentView, onSearch, onGoHome, onGoPools, o
           </div>
         </div>
 
-        {/* DERECHA (Sin cambios) */}
         <div className="flex items-center gap-6">
-          <div 
-            className="relative flex items-center"
-            onMouseEnter={() => setIsSearchOpen(true)}
-            onMouseLeave={() => { if (searchTerm === '') setIsSearchOpen(false); }}
-          >
-            <motion.div 
-              initial={false}
-              animate={{ width: isSearchOpen ? 240 : 40 }}
-              className={`flex items-center h-10 rounded-xl border transition-colors duration-300 ${
-                isSearchOpen ? 'bg-white/5 border-white/20' : 'bg-transparent border-transparent'
-              }`}
-            >
-              <button 
-                onClick={triggerSearch}
-                className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white transition-colors"
-              >
-                <Search size={18} />
-              </button>
-
+          {/* BUSCADOR */}
+          <div className="relative flex items-center" onMouseEnter={() => setIsSearchOpen(true)} onMouseLeave={() => { if (searchTerm === '') setIsSearchOpen(false); }}>
+            <motion.div animate={{ width: isSearchOpen ? 240 : 40 }} className={`flex items-center h-10 rounded-xl border ${isSearchOpen ? 'bg-white/5 border-white/20' : 'bg-transparent border-transparent'}`}>
+              <button onClick={triggerSearch} className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white"><Search size={18} /></button>
               <AnimatePresence>
                 {isSearchOpen && (
                   <motion.input
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    autoFocus
-                    type="text"
-                    placeholder="Search..."
-                    className="bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-[11px] font-bold text-white uppercase tracking-wider w-full pr-4 shadow-none"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    autoFocus type="text" placeholder="Search..."
+                    className="bg-transparent border-none outline-none text-[11px] font-bold text-white uppercase w-full pr-4"
+                    value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && triggerSearch()}
                   />
                 )}
@@ -129,64 +90,28 @@ export function Navigation({ user, currentView, onSearch, onGoHome, onGoPools, o
             </motion.div>
           </div>
 
+          {/* USUARIO */}
           {user ? (
             <div className="relative">
-              <button 
-                onClick={() => setUserMenuOpen(!userMenuOpen)} 
-                className={`flex items-center gap-3 px-5 py-2.5 rounded-xl border transition-all duration-300 ${
-                  userMenuOpen ? 'bg-white/10 border-white/20' : 'bg-[#0a0a0a] border-white/10 hover:border-[#ff0055]/50'
-                }`}
-              >
+              <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-3 px-5 py-2.5 rounded-xl border border-white/10 bg-[#0a0a0a]">
                 <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#ff0055] to-purple-600 flex items-center justify-center">
                   <User size={12} className="text-white" />
                 </div>
-                <span className="text-[10px] font-black uppercase text-white tracking-wider">
-                  {user.email?.split('@')[0]}
-                </span>
-                <ChevronDown size={14} className={`text-gray-400 transition-transform duration-300 ${userMenuOpen ? 'rotate-180' : ''}`} />
+                <span className="text-[10px] font-black uppercase text-white tracking-wider">{user.email?.split('@')[0]}</span>
+                <ChevronDown size={14} className={`text-gray-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
-
               <AnimatePresence>
                 {userMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-[-1]" onClick={() => setUserMenuOpen(false)} />
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }} 
-                      animate={{ opacity: 1, y: 0, scale: 1 }} 
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 mt-3 w-60 bg-[#111] border border-white/10 rounded-2xl shadow-2xl p-2 overflow-hidden ring-1 ring-white/5"
-                    >
-                      <div className="px-4 py-3 border-b border-white/5 mb-2">
-                         <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Signed in as</p>
-                         <p className="text-xs font-bold text-white truncate">{user.email}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <button className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all uppercase tracking-widest">
-                          <History size={14} /> History
-                        </button>
-                        <button className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all uppercase tracking-widest">
-                          <Settings size={14} /> Settings
-                        </button>
-                        <button className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-[#ff0055] hover:bg-[#ff0055]/10 rounded-lg transition-all uppercase tracking-widest">
-                          <LifeBuoy size={14} /> Support
-                        </button>
-                        <div className="h-px bg-white/5 my-1" />
-                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-red-500 hover:bg-red-500/10 rounded-lg transition-all uppercase tracking-widest">
-                          <LogOut size={14} /> Sign Out
-                        </button>
-                      </div>
-                    </motion.div>
-                  </>
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="absolute right-0 mt-3 w-60 bg-[#111] border border-white/10 rounded-2xl p-2 shadow-2xl">
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-red-500 hover:bg-red-500/10 rounded-lg uppercase tracking-widest">
+                      <LogOut size={14} /> Sign Out
+                    </button>
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>
           ) : (
-            <button 
-              onClick={() => document.getElementById('auth-section')?.scrollIntoView({behavior: 'smooth'})} 
-              className="px-8 py-2.5 bg-[#ff0055] hover:bg-[#d60045] text-white rounded-xl font-black text-[10px] uppercase transition-all duration-300"
-            >
-              Login
-            </button>
+            <button onClick={() => document.getElementById('auth-section')?.scrollIntoView({behavior: 'smooth'})} className="px-8 py-2.5 bg-[#ff0055] text-white rounded-xl font-black text-[10px] uppercase">Login</button>
           )}
         </div>
       </div>
