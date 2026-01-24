@@ -1,10 +1,10 @@
+// src/App.tsx - EDITADO PARA PAGINACIÓN MASIVA
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../supabase'; 
 import { API_URL } from '../../config';
 
 import { Navigation } from './navigation';
 import { Hero } from './hero';
-// ✅ CORREGIDO: Importación con llaves para exportación nombrada
 import { LatestUploads } from './LatestUploads';
 import { Footer } from './Footer';
 import { Charts } from './Charts';
@@ -31,48 +31,58 @@ export default function App() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<'home' | 'search' | 'pools' | 'packs'>('home');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; 
+  
+  // ✅ ESTADO DE PAGINACIÓN DE API
+  const [serverTracks, setServerTracks] = useState<Track[]>([]);
+  const [serverPage, setServerPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalServerTracks, setTotalServerTracks] = useState(0);
 
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [realTracks, setRealTracks] = useState<Track[]>([]);
+  const [realTracks, setRealTracks] = useState<Track[]>([]); // Supabase (Latest)
   const [crate, setCrate] = useState<Track[]>([]);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const filteredTracks = useMemo(() => {
-    return realTracks.filter(track => {
-      const matchesGenre = !selectedGenre || track.pool_origin === selectedGenre;
-      const search = searchTerm.toLowerCase().trim();
-      const title = (track.title || track.filename || '').toLowerCase();
-      const artist = (track.artist || '').toLowerCase();
-      return matchesGenre && (!search || title.includes(search) || artist.includes(search));
-    });
-  }, [realTracks, selectedGenre, searchTerm]);
-
-  const totalPages = Math.ceil(filteredTracks.length / itemsPerPage);
-  const currentTracksPage = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredTracks.slice(start, start + itemsPerPage);
-  }, [filteredTracks, currentPage]);
-
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-    document.getElementById('latest')?.scrollIntoView({ behavior: 'smooth' });
+  // ✅ FUNCIÓN PARA BUSCAR EN EL VPS (CATÁLOGO DE 343K)
+  const fetchFromServer = async (query: string, page: number) => {
+    try {
+      const resp = await fetch(`${API_URL}/api/search?q=${encodeURIComponent(query)}&page=${page}`);
+      const data = await resp.json();
+      
+      // Si es la página 1, reemplazamos. Si no, acumulamos.
+      setServerTracks(prev => page === 1 ? data.tracks : [...prev, data.tracks]);
+      setHasMore(data.hasMore);
+      setTotalServerTracks(data.total);
+    } catch (e) {
+      console.error("Error conectando con el VPS:", e);
+    }
   };
 
+  // ✅ MANEJO DE BÚSQUEDA REAL TIEMPO
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    setCurrentPage(1);
-    setCurrentView(term.trim() !== '' ? 'search' : 'home');
-    if (term.trim() !== '') window.scrollTo({ top: 0, behavior: 'smooth' });
+    setServerPage(1);
+    if (term.trim() !== '') {
+      setCurrentView('search');
+      fetchFromServer(term, 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setCurrentView('home');
+    }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setServerPage(newPage);
+    fetchFromServer(searchTerm, newPage);
+    document.getElementById('latest')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const goHome = () => {
     setSearchTerm('');
     setSelectedGenre(null);
-    setCurrentPage(1);
+    setServerPage(1);
     setCurrentView('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -84,8 +94,9 @@ export default function App() {
     if (currentTrack && (currentTrack.id === track.id || currentTrack.title === track.title)) {
       setIsPlaying(!isPlaying); 
     } else {
-      // ✅ FIX: Apuntamos correctamente a /api/stream
-      const streamUrl = track.streamUrl || `${API_URL}/api/stream?path=${encodeURIComponent(track.file_path)}`;
+      // ✅ FIX: Ruta de stream directa al VPS
+      const path = track.file_path || track.filename;
+      const streamUrl = `${API_URL}/api/stream?path=${encodeURIComponent(path)}`;
       setCurrentTrack({ ...track, streamUrl });
       setIsPlaying(true);
     }
@@ -101,9 +112,10 @@ export default function App() {
 
   const handleGenreSelect = (genreName: string | null) => {
     setSelectedGenre(prev => prev === genreName ? null : genreName);
-    setCurrentPage(1);
+    setServerPage(1);
     if (currentView !== 'home') setCurrentView('home');
-    document.getElementById('latest')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Si hay un género seleccionado, también podríamos filtrar en servidor, 
+    // pero de momento lo dejamos local para "Latest Uploads"
   };
 
   useEffect(() => {
@@ -116,10 +128,13 @@ export default function App() {
           setLoading(false);
         }
       } catch (error) { if (mounted) setLoading(false); }
+      
+      // Cargar los últimos 200 de Supabase para la Home
       const { data } = await supabase.from('tracks').select('*').order('created_at', { ascending: false }).limit(200);
       if (data && mounted) setRealTracks(data as Track[]);
     };
     init();
+
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (mounted) setUser(session?.user ?? null);
     });
@@ -154,52 +169,21 @@ export default function App() {
            {currentView === 'search' && (
              <section className="space-y-12 animate-in fade-in duration-500">
                 <div className="flex items-center justify-between border-b border-white/10 pb-8">
-                  <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">Search <span className="text-[#ff0055]">Results</span></h2>
+                  <h2 className="text-4xl font-black uppercase italic tracking-tighter text-white">
+                    Search <span className="text-[#ff0055]">Results</span> 
+                    <span className="ml-4 text-sm text-gray-500 font-normal">({totalServerTracks} found)</span>
+                  </h2>
                   <button onClick={goHome} className="text-xs font-bold text-gray-500 hover:text-white uppercase tracking-widest border border-white/10 px-4 py-2 rounded-full">← Back</button>
                 </div>
-                <LatestUploads tracks={currentTracksPage} selectedGenre={null} onGenreSelect={() => {}} onToggleCrate={toggleCrate} crate={crate} user={user} onPlay={handlePlay} currentTrack={currentTrack} isPlaying={isPlaying} />
-             </section>
-           )}
-
-           {currentView === 'pools' && (
-             <section className="pt-10 animate-in slide-in-from-bottom-4 duration-700">
-                <div className="text-center mb-16">
-                  <div className="flex justify-center mb-6">
-                    <div className="p-4 rounded-full bg-[#ff0055]/10 border border-[#ff0055]/20 shadow-[0_0_30px_rgba(255,0,85,0.2)]">
-                        <FolderArchive className="text-[#ff0055]" size={40} />
-                    </div>
-                  </div>
-                  <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white mb-4">Professional <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff0055] to-purple-600">DJ Pools </span></h2>
-                </div>
-                <PoolGrid />
-             </section>
-           )}
-
-           {currentView === 'packs' && (
-             <section className="animate-in zoom-in-95 duration-300 min-h-screen">
-                <div className="text-center mb-10">
-                   <h2 className="text-5xl font-black uppercase italic tracking-tighter text-white mb-2">Exclusive <span className="text-[#ff0055]">Packs</span></h2>
-                   <p className="text-gray-400">Direct Server Access • Folders & Playlists</p>
-                </div>
-                {/* ✅ PASAMOS LAS PROPS AL COMPONENTE DE PACKS */}
-                <DJPacks 
-                  user={user}
-                  isPlaying={isPlaying}
-                  currentTrack={currentTrack}
-                  onPlay={(packTrack) => {
-                    const trackToPlay: Track = {
-                      id: packTrack.id || packTrack.name,
-                      title: packTrack.name,
-                      artist: 'Mastered Audio',
-                      filename: packTrack.name,
-                      file_path: packTrack.server_path,
-                      // ✅ SEGURIDAD CRÍTICA: Usamos el túnel seguro del servidor
-                      streamUrl: `${API_URL}/api/stream?path=${encodeURIComponent(packTrack.server_path)}`,
-                      created_at: new Date().toISOString()
-                    };
-                    handlePlay(trackToPlay);
-                  }}
-                />
+                {/* ✅ USAMOS serverTracks PARA LA BÚSQUEDA */}
+                <LatestUploads tracks={serverTracks} selectedGenre={null} onGenreSelect={() => {}} onToggleCrate={toggleCrate} crate={crate} user={user} onPlay={handlePlay} currentTrack={currentTrack} isPlaying={isPlaying} />
+                
+                {/* Paginador de búsqueda */}
+                {hasMore && (
+                    <button onClick={() => handlePageChange(serverPage + 1)} className="mx-auto block bg-white/5 border border-white/10 px-8 py-3 rounded-full hover:bg-[#ff0055] transition-all font-bold uppercase text-xs tracking-widest">
+                        Load More Results
+                    </button>
+                )}
              </section>
            )}
 
@@ -207,24 +191,28 @@ export default function App() {
              <div className="space-y-32">
                <Trends onToggleCrate={toggleCrate} crate={crate} />
                <section id="latest" className="scroll-mt-32">
-                  <LatestUploads tracks={currentTracksPage} selectedGenre={selectedGenre} onGenreSelect={handleGenreSelect} onToggleCrate={toggleCrate} crate={crate} user={user} onPlay={handlePlay} currentTrack={currentTrack} isPlaying={isPlaying} />
-                  {totalPages > 1 && (
-                    <div className="flex justify-center items-center gap-2 mt-16 pb-10">
-                      <button disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)} className="p-2.5 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white disabled:opacity-20 transition-all mr-2"><ChevronLeft size={18} /></button>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                        if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
-                          return (
-                            <button key={page} onClick={() => handlePageChange(page)} className={`w-10 h-10 rounded-xl font-black text-[11px] transition-all duration-300 ${currentPage === page ? 'bg-[#ff0055] text-white shadow-[0_0_20px_rgba(255,0,85,0.4)]' : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white border border-white/5'}`}>{page}</button>
-                          );
-                        }
-                        return null;
-                      })}
-                      <button disabled={currentPage === totalPages} onClick={() => handlePageChange(currentPage + 1)} className="p-2.5 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white disabled:opacity-20 transition-all ml-2"><ChevronRight size={18} /></button>
-                    </div>
-                  )}
+                  {/* Para la home usamos realTracks (Supabase) con su paginación local original si quieres */}
+                  <LatestUploads tracks={realTracks.slice(0, 20)} selectedGenre={selectedGenre} onGenreSelect={handleGenreSelect} onToggleCrate={toggleCrate} crate={crate} user={user} onPlay={handlePlay} currentTrack={currentTrack} isPlaying={isPlaying} />
                </section>
                <div id="charts" className="bg-[#0a0a0a] rounded-3xl border border-white/5 p-8"><Charts user={user} /></div>
              </div>
+           )}
+
+           {/* Mantienes pools y packs igual, ya que ellos llaman internamente a la API */}
+           {currentView === 'pools' && <PoolGrid />}
+           {currentView === 'packs' && (
+              <DJPacks 
+                user={user} 
+                isPlaying={isPlaying} 
+                currentTrack={currentTrack} 
+                onPlay={(t) => handlePlay({
+                  ...t, 
+                  id: t.id || t.name, 
+                  title: t.name, 
+                  file_path: t.server_path,
+                  created_at: new Date().toISOString()
+                } as Track)} 
+              />
            )}
         </div>
       </main>
@@ -234,8 +222,8 @@ export default function App() {
       {currentTrack && (
         <AudioPlayer 
             url={currentTrack.streamUrl || ''} 
-            title={currentTrack.title || currentTrack.filename} 
-            artist={currentTrack.artist || currentTrack.pool_origin || 'Unknown'}
+            title={currentTrack.title} 
+            artist={currentTrack.artist || 'Mastered Audio'}
             isPlaying={isPlaying} 
             onTogglePlay={() => setIsPlaying(!isPlaying)} 
         />
