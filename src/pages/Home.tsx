@@ -12,9 +12,10 @@ interface HomePageProps {
     onGenreSelect: (genre: string | null) => void;
     user: any;
     featuredPack?: any; // Nuevo prop para el pack destacado
+    loading?: boolean;
 }
 
-export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGenre, onGenreSelect, featuredPack }) => {
+export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGenre, onGenreSelect, featuredPack, loading }) => {
     const { playTrack, currentTrack, isPlaying } = usePlayer();
     const { crate, toggleCrate } = useCrate();
 
@@ -59,6 +60,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                 <CinematicHero
                     onPlay={handlePlayPack}
                     pack={featuredPack}
+                    loading={loading}
                 />
             </div>
 
