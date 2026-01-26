@@ -34,7 +34,7 @@ export function getTrackUrl(track: Track, asDownload: boolean = false): string {
         // We split by '/' to encode each segment, preserving directory structure
         const encodedPath = cleanPath.split('/').map(encodeURIComponent).join('/');
 
-        return `${cleanStorageUrl}/${encodedPath}`;
+        return `${cleanStorageUrl}/${encodedPath}${asDownload ? '?download=true' : ''}`;
     }
 
     // 3. Fallback to API Proxy
