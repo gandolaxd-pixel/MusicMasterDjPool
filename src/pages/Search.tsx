@@ -15,7 +15,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ user }) => {
     const query = searchParams.get('q') || '';
 
     const { playTrack, currentTrack, isPlaying } = usePlayer();
-    const { serverTracks, totalServerTracks, hasMore, loadMore, search, serverPage } = useSearch();
+    const { serverTracks, totalServerTracks, hasMore, loadMore, search } = useSearch();
     const { crate, toggleCrate } = useCrate();
 
     useEffect(() => {

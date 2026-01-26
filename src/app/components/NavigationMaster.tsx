@@ -1,7 +1,6 @@
-import { Flame, User, LogOut, ChevronDown, Settings, History, LifeBuoy, Search, CreditCard } from 'lucide-react';
+import { Flame, User, LogOut, ChevronDown, History, LifeBuoy, Search, CreditCard } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '../../supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 

@@ -1,13 +1,7 @@
-import React, { useRef } from 'react';
 import { Zap } from 'lucide-react';
 
-interface TrendsProps {
-  onToggleCrate: (track: any) => void;
-  crate: any[];
-}
+export function Trends() {
 
-export function Trends({ onToggleCrate, crate }: TrendsProps) {
-  
   const trendingPicks = [
     { id: 101, title: "Reggaeton Banger", artist: "Exclusive Remix", tag: "HOT", img: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=200" },
     { id: 102, title: "Urban Latin Pack", artist: "Pro Edit v2", tag: "TRENDING", img: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?auto=format&fit=crop&q=80&w=200" },
@@ -21,7 +15,7 @@ export function Trends({ onToggleCrate, crate }: TrendsProps) {
 
   return (
     <section className="relative w-full bg-[#080808] border-y border-white/5 py-6 mt-10 mb-10 overflow-hidden">
-      
+
       {/* Indicador Fijo */}
       <div className="absolute left-0 top-0 bottom-0 z-20 bg-[#080808]/90 backdrop-blur-lg flex items-center px-8 border-r border-white/10 shadow-[20px_0_40px_rgba(0,0,0,0.8)] pointer-events-none">
         <div className="flex items-center gap-3">
@@ -37,16 +31,16 @@ export function Trends({ onToggleCrate, crate }: TrendsProps) {
       <div className="flex overflow-x-auto no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing">
         <div className="flex animate-marquee items-center gap-16 pl-52 pr-20 hover:pause-marquee">
           {marqueeItems.map((item, index) => (
-            <div 
+            <div
               key={`${item.id}-${index}`}
               className="group flex items-center gap-5 flex-shrink-0"
             >
               {/* Esfera */}
               <div className="relative flex-shrink-0">
                 <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-[#ff0055] group-hover:shadow-[0_0_20px_rgba(255,0,85,0.3)] transition-all duration-500">
-                  <img 
-                    src={item.img} 
-                    alt={item.title} 
+                  <img
+                    src={item.img}
+                    alt={item.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                     draggable="false"
                   />

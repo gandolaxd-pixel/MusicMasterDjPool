@@ -104,7 +104,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
 
                 {/* C. TRENDS MARQUEE (Visual Break) */}
                 <div className="py-4">
-                    <Trends onToggleCrate={toggleCrate} crate={crate} />
+                    <Trends />
                 </div>
 
                 {/* D. DATA LIST (Pro Utility) */}

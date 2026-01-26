@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
-import { Download, Calendar, Music2, Play, Pause } from 'lucide-react';
+import { Download, Calendar, Play, Pause } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackUrl } from '../utils/urlUtils';
 

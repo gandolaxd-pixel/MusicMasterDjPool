@@ -1,4 +1,4 @@
-import { motion } from 'motion/react';
+
 import { Music2, Waves, Globe, Mic2, Radio, Palmtree, Lock, ArrowRight } from 'lucide-react';
 
 const genres = [
@@ -17,7 +17,7 @@ interface FeaturedGenresProps {
 }
 
 export function FeaturedGenres({ onGenreSelect, activeGenre, user }: FeaturedGenresProps) {
-  
+
   const handleGenreClick = (genreName: string) => {
     if (!user) {
       window.location.href = '#plans'; // O abrir modal
@@ -50,9 +50,9 @@ export function FeaturedGenres({ onGenreSelect, activeGenre, user }: FeaturedGen
                 className="group relative cursor-pointer"
               >
                 {/* Caja estática optimizada */}
-                <div 
+                <div
                   className={`relative bg-[#0f0f0f] border rounded-2xl p-6 transition-all duration-300 hover:bg-[#1a1a1a]`}
-                  style={{ 
+                  style={{
                     borderColor: isSelected ? genre.color : 'rgba(255,255,255,0.1)',
                     boxShadow: isSelected ? `0 0 20px ${genre.color}33` : 'none'
                   }}
@@ -61,7 +61,7 @@ export function FeaturedGenres({ onGenreSelect, activeGenre, user }: FeaturedGen
                     <div className={`p-3 rounded-2xl bg-gradient-to-br ${genre.gradient} mb-4 shadow-lg`}>
                       <Icon size={24} className="text-white" />
                     </div>
-                    
+
                     <h3 className="font-black uppercase text-[10px] tracking-[0.2em] mb-3 text-white">
                       {genre.name}
                     </h3>

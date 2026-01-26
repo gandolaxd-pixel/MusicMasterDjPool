@@ -11,12 +11,6 @@ interface DateItem {
     drop_day: number;
 }
 
-interface DjTrack {
-    pool_id: string;
-    format: string;
-    drop_month: string;
-    drop_day: number;
-}
 
 const PoolGrid: React.FC = () => {
     const [view, setView] = useState<'brands' | 'dates'>('brands');

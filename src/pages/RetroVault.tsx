@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { LatestUploads } from '../app/components/LatestUploads';
 import { usePlayer } from '../context/PlayerContext';
 import { useCrate } from '../context/CrateContext';
-import { Disc, Sparkles } from 'lucide-react';
+import { Disc } from 'lucide-react';
 
 interface RetroVaultProps {
     realTracks: any[];

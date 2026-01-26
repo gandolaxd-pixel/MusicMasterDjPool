@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Database, Activity, Clock, Zap } from 'lucide-react';
+import { Database, Activity, Clock } from 'lucide-react';
 
 interface DashboardHeroProps {
     user: any;

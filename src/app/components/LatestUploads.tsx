@@ -1,6 +1,5 @@
 import { Play, Pause, Download, Lock, X, Music2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { API_URL } from '../../config';
 import { getTrackUrl } from '../../utils/urlUtils';
 import { TrackSkeleton } from './TrackSkeleton';
 

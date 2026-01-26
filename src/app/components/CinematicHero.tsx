@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Play, Download, Info } from 'lucide-react';
+import { Play, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface CinematicHeroProps {
@@ -23,7 +23,7 @@ export function CinematicHero({ onPlay, pack, loading }: CinematicHeroProps) {
     const handleViewPack = () => {
         if (pack && pack.original_folder) {
             // Remove leading slash if present for cleaner URL, though logic handles both
-            const folderParam = pack.original_folder.startsWith('/') ? pack.original_folder.substring(1) : pack.original_folder;
+
             navigate(`/packs?folder=${encodeURIComponent(pack.original_folder)}`);
         } else {
             navigate('/packs');

@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { ChevronRight } from 'lucide-react';
+
 
 interface HeroProps {
   onJoinClick: () => void;

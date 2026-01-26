@@ -4,7 +4,7 @@ import { CreditCard, CheckCircle, AlertCircle } from 'lucide-react';
 
 export const SubscriptionPage = ({ user }: { user: any }) => {
     const [profile, setProfile] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+
 
     useEffect(() => {
         if (!user) return;
@@ -18,7 +18,7 @@ export const SubscriptionPage = ({ user }: { user: any }) => {
                 data = { subscription_status: 'free', subscription_plan: 'basic' };
             }
             setProfile(data);
-            setLoading(false);
+
         };
         fetchProfile();
     }, [user]);

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { Track } from '../types';
-import { API_URL } from '../config';
+
 
 interface SearchContextType {
     serverTracks: Track[];

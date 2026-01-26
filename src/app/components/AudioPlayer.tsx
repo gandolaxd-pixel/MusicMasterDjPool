@@ -85,7 +85,7 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
     return `${m}:${s}`;
   };
 
-  const downloadUrl = url ? (url.includes('?') ? `${url}&download=true` : `${url}?download=true`) : "#";
+
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4">
@@ -154,7 +154,7 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
               href={currentTrack ? getTrackUrl(currentTrack, true) : '#'}
               download
               target="_self"
-              onClick={async (e) => {
+              onClick={async () => {
                 if (currentTrack && user) {
                   // Recording download logic
                   const { supabase } = await import('../../supabase');
