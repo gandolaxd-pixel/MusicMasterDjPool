@@ -85,6 +85,9 @@ const AppContent = () => {
     fetchInit();
   }, []);
 
+  // State for Sign Up Funnel
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#ff0055]"></div></div>;
 
   if (!user) {
@@ -93,13 +96,13 @@ const AppContent = () => {
         <BrowserRouter>
           <Navigation user={null} currentView="home" onSearch={() => { }} />
         </BrowserRouter>
-        <Hero onJoinClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })} />
+        <Hero onJoinClick={() => document.getElementById('plans')?.scrollIntoView({ behavior: 'smooth' })} />
         <WhyJoin />
-        <MembershipPlans />
+        <MembershipPlans onSelectPlan={setSelectedPlan} />
         <main className="max-w-7xl mx-auto px-4 py-20">
           <div id="auth-section" className="max-w-md mx-auto bg-[#0a0a0a] border border-white/10 p-10 rounded-3xl shadow-2xl">
             <h2 className="text-2xl font-black uppercase italic mb-8 text-center tracking-tighter">DJ <span className="text-[#ff0055]">Access</span></h2>
-            <AuthForm />
+            <AuthForm selectedPlan={selectedPlan} />
           </div>
         </main>
         <Footer />

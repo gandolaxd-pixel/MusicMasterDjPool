@@ -20,7 +20,18 @@ const plans = [
   }
 ];
 
-export function MembershipPlans() {
+interface MembershipPlansProps {
+  onSelectPlan?: (planName: string) => void;
+}
+
+export function MembershipPlans({ onSelectPlan }: MembershipPlansProps) {
+  const handlePlanSelect = (planName: string) => {
+    if (onSelectPlan) {
+      onSelectPlan(planName);
+      document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <section id="plans" className="py-24 bg-black overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -87,6 +98,7 @@ export function MembershipPlans() {
                 </ul>
 
                 <button
+                  onClick={() => handlePlanSelect(plan.name)}
                   className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all duration-300 ${plan.popular
                     ? 'bg-[#ff0055] text-white shadow-[0_0_20px_rgba(255,0,85,0.4)] hover:shadow-[#ff0055]/60 hover:scale-105'
                     : 'bg-white/5 text-white border border-white/20 hover:bg-white/10 hover:border-[#ff0055]'

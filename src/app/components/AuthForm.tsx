@@ -2,12 +2,21 @@ import React, { useState } from 'react';
 import { supabase } from '../../supabase';
 import { Mail, Lock, Loader2 } from 'lucide-react';
 
-export function AuthForm() {
+interface AuthFormProps {
+  selectedPlan?: string | null;
+}
+
+export function AuthForm({ selectedPlan }: AuthFormProps) {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(!!selectedPlan);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  // Update register mode if plan is selected
+  React.useEffect(() => {
+    if (selectedPlan) setIsRegistering(true);
+  }, [selectedPlan]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +41,12 @@ export function AuthForm() {
 
   return (
     <div className="space-y-6">
+      {selectedPlan && isRegistering && (
+        <div className="bg-[#ff0055]/10 border border-[#ff0055]/30 p-4 rounded-xl flex flex-col items-center">
+          <span className="text-[#ff0055] text-[10px] font-black uppercase tracking-widest">Selected Plan</span>
+          <span className="text-white font-bold text-lg">{selectedPlan}</span>
+        </div>
+      )}
       <form onSubmit={handleAuth} className="space-y-4">
         <div className="relative group">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#ff0055] transition-colors" size={18} />
@@ -58,9 +73,8 @@ export function AuthForm() {
         </div>
 
         {message && (
-          <div className={`p-3 rounded-lg text-[10px] font-bold uppercase tracking-widest ${
-            message.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-          }`}>
+          <div className={`p-3 rounded-lg text-[10px] font-bold uppercase tracking-widest ${message.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+            }`}>
             {message.text}
           </div>
         )}
