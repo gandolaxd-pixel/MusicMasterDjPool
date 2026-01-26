@@ -104,8 +104,6 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, onPl
                       <div className="md:col-span-1 flex justify-end items-center gap-3">
                         <a
                           href={getTrackUrl(track, true)}
-                          target="_blank"
-                          rel="noopener noreferrer"
                           className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all ${user ? 'bg-[#ff0055] text-white hover:brightness-110 hover:scale-105 shadow-[0_0_10px_rgba(255,0,85,0.3)]' : 'bg-white/5 border border-white/10 text-gray-500 cursor-not-allowed'}`}
                           onClick={(e) => { if (!user) e.preventDefault(); }}
                         >
