@@ -1,7 +1,9 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import axios from 'axios';
-import { basename } from 'path';
+import { basename, join } from 'path';
+import * as fs from 'fs';
+import NodeID3 from 'node-id3';
 
 // Load credentials from Environment Variables
 const STORAGE_CONFIG = {
@@ -9,6 +11,30 @@ const STORAGE_CONFIG = {
     pass: process.env.STORAGE_PASS,
     host: process.env.STORAGE_HOST || "u529624-sub1.your-storagebox.de"
 };
+
+// Cache branding buffer to avoid reading FS on every request
+let BRAND_COVER_BUFFER: Buffer | null = null;
+
+try {
+    // Attempt to load cover from local public immediately
+    // Note: In Vercel serverless, public files might be in process.cwd()/public depending on config
+    // Fallback: Check standard locations
+    const possiblePaths = [
+        join(process.cwd(), 'public', 'images', 'brand_cover.png'),
+        join(process.cwd(), 'images', 'brand_cover.png'),
+        '/var/task/public/images/brand_cover.png'
+    ];
+
+    for (const p of possiblePaths) {
+        if (fs.existsSync(p)) {
+            BRAND_COVER_BUFFER = fs.readFileSync(p);
+            console.log(`✅ Default Cover Art loaded from: ${p}`);
+            break;
+        }
+    }
+} catch (err) {
+    console.error("⚠️ Could not load default cover art on startup:", err);
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Enable CORS
@@ -22,9 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
     }
 
-    // Validate Configuration
     if (!STORAGE_CONFIG.user || !STORAGE_CONFIG.pass) {
-        console.error("❌ CRITICAL: Missing Storage Credentials in Environment Variables (STORAGE_USER, STORAGE_PASS)");
         return res.status(500).json({ error: "Server Configuration Error: Missing Storage Credentials" });
     }
 
@@ -34,20 +58,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).send("Missing path parameter");
     }
 
-    // 🛡️ SECURITY: Explicitly block path traversal attempts
     if (trackPath.includes('..') || trackPath.includes('\0')) {
-        console.error(`❌ Security Alert: Path traversal attempt blocked: ${trackPath}`);
         return res.status(403).send("Forbidden: Invalid path");
     }
 
-    // Ensure path has leading slash
     let cleanPath = trackPath.startsWith('/') ? trackPath : '/' + trackPath;
-
-    // Encode path components for the URL (preserving slashes)
-    // Example: /Musica/Techno/My Song.mp3 -> /Musica/Techno/My%20Song.mp3
     const encodedPath = cleanPath.split('/').map(segment => encodeURIComponent(segment)).join('/');
-
-    // Construct authenticated URL
     const secureUrl = `https://${STORAGE_CONFIG.user}:${STORAGE_CONFIG.pass}@${STORAGE_CONFIG.host}${encodedPath}`;
 
     try {
@@ -64,34 +80,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             validateStatus: (status) => status >= 200 && status < 300
         });
 
-        // Forward important headers for streaming/seeking
-        res.status(response.status); // 200 or 206
+        const filename = basename(cleanPath);
+        const isMp3 = filename.toLowerCase().endsWith('.mp3');
+        const isDownload = download === 'true';
 
-        if (response.headers['content-range']) res.setHeader('Content-Range', response.headers['content-range']);
-        if (response.headers['accept-ranges']) res.setHeader('Accept-Ranges', response.headers['accept-ranges']);
-        if (response.headers['content-length']) res.setHeader('Content-Length', response.headers['content-length']);
+        // 🚀 SMART INJECTION LOGIC
+        // Only inject for MP3 downloads IF we have the cover art ready
+        if (isDownload && isMp3 && BRAND_COVER_BUFFER) {
 
-        const contentType = response.headers['content-type'] || 'audio/mpeg';
-        res.setHeader('Content-Type', contentType);
+            // 1. Create ID3 Tags
+            const tags: NodeID3.Tags = {
+                title: filename.replace(/\.[^/.]+$/, ""), // Remove extension
+                artist: "MUSIC MASTER DJ POOL",
+                album: "VIP MEMBER EXCLUSIVE",
+                year: new Date().getFullYear().toString(),
+                image: {
+                    mime: "image/png",
+                    type: {
+                        id: 3,
+                        name: "front cover"
+                    },
+                    description: "Cover",
+                    imageBuffer: BRAND_COVER_BUFFER
+                },
+                userDefinedText: [{
+                    description: "WWW",
+                    value: "musicmasterpool.com"
+                }]
+            };
 
-        // Handle Download properly
-        if (download === 'true') {
-            const filename = basename(cleanPath);
-            // Robust filename handling
+            // 2. Generate Tag Buffer (Synchronous, fast)
+            const tagBuffer = NodeID3.create(tags);
+
+            // 3. Calc new size
+            const originalSize = parseInt(response.headers['content-length'] || '0');
+            if (originalSize > 0) {
+                res.setHeader('Content-Length', originalSize + tagBuffer.length);
+            }
+
+            // 4. Set Download Headers
             const encodedFilename = encodeURIComponent(filename);
             res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"; filename*=UTF-8''${encodedFilename}`);
-        }
+            res.setHeader('Content-Type', 'audio/mpeg');
 
-        // Pipe data to response
-        response.data.pipe(res);
+            // 5. STREAM SPLICING: Write Tags -> Pipe Content
+            res.write(tagBuffer, () => {
+                response.data.pipe(res);
+            });
+
+        } else {
+            // STANDARD PASS-THROUGH (WAVs, Packs, or Streaming)
+            res.status(response.status);
+
+            if (response.headers['content-range']) res.setHeader('Content-Range', response.headers['content-range']);
+            if (response.headers['accept-ranges']) res.setHeader('Accept-Ranges', response.headers['accept-ranges']);
+            if (response.headers['content-length']) res.setHeader('Content-Length', response.headers['content-length']);
+            res.setHeader('Content-Type', response.headers['content-type'] || 'application/octet-stream');
+
+            if (isDownload) {
+                const encodedFilename = encodeURIComponent(filename);
+                res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"; filename*=UTF-8''${encodedFilename}`);
+            }
+
+            response.data.pipe(res);
+        }
 
     } catch (error: any) {
-        console.error(`❌ Audio Stream Error for path: ${cleanPath}`);
-        if (error.response) {
-            console.error(`Storage Response: ${error.response.status} ${error.response.statusText}`);
-        } else {
-            console.error(`Error details: ${error.message}`);
-        }
-        res.status(404).send("Audio not found or inaccessible.");
+        console.error(`❌ Stream Error: ${error.message}`);
+        res.status(404).send("Audio not found.");
     }
 }

@@ -30,7 +30,8 @@ export function getTrackUrl(track: Track, asDownload: boolean = false): string {
     }
 
     // 2. Use Direct Storage (Cloudflare Tunnel) if configured
-    if (STORAGE_URL) {
+    // EXCEPTION: If downloading, force API proxy to inject ID3 tags (Cover Art)
+    if (STORAGE_URL && !asDownload) {
         // Remove leading slash if present to avoid double slashes
         const cleanPath = path.startsWith('/') ? path.substring(1) : path;
         // Ensure STORAGE_URL doesn't end with slash
@@ -40,7 +41,7 @@ export function getTrackUrl(track: Track, asDownload: boolean = false): string {
         // We split by '/' to encode each segment, preserving directory structure
         const encodedPath = cleanPath.split('/').map(encodeURIComponent).join('/');
 
-        return `${cleanStorageUrl}/${encodedPath}${asDownload ? '?download=true' : ''}`;
+        return `${cleanStorageUrl}/${encodedPath}`;
     }
 
     // 3. Fallback to API Proxy (Serverless /api/stream)
