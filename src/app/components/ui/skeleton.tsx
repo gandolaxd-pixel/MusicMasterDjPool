@@ -1,13 +1,16 @@
-import { cn } from "./utils";
+import React from 'react';
+import { cn } from '../../../lib/utils'; // Assuming you have a utils file or similar, if not I'll create a simple helper or use inline classes
 
-function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+// If utils doesn't exist, I'll stick to a simpler implementation first and we can refactor later if needed, 
+// but standard shadcn/ui pattern uses cn. I'll assume standard className prop for now.
+
+interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> { }
+
+export function Skeleton({ className, ...props }: SkeletonProps) {
   return (
     <div
-      data-slot="skeleton"
-      className={cn("bg-accent animate-pulse rounded-md", className)}
+      className={`animate-pulse rounded-md bg-white/10 ${className}`}
       {...props}
     />
   );
 }
-
-export { Skeleton };

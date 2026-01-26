@@ -1,31 +1,36 @@
 import { motion } from 'motion/react';
-import { Award, Scissors, FileAudio, Zap, Users } from 'lucide-react';
+import { Award, Scissors, FileAudio, Zap, Users, Smartphone } from 'lucide-react';
 
 const features = [
   {
-    icon: Award,
-    title: 'High-Quality Exclusive Edits',
-    description: 'Professionally produced edits you won\'t find anywhere else',
-  },
-  {
-    icon: Scissors,
-    title: 'Clean Intros & Outros',
-    description: 'Perfect transitions for seamless mixing',
+    icon: Users,
+    title: 'DJ Pools Included',
+    description: 'Access top tier DJ Pools content in one place',
   },
   {
     icon: FileAudio,
-    title: 'DJ-Ready Formats',
-    description: 'WAV, FLAC, and MP3 320kbps - your choice',
+    title: 'Curated DJ Packs',
+    description: 'Exclusive selection of packs sorted by genre and year',
+  },
+  {
+    icon: Scissors,
+    title: 'Exclusive Remixes & Edits',
+    description: 'Versions you won\'t find on streaming platforms',
   },
   {
     icon: Zap,
-    title: 'Fast Downloads',
-    description: 'High-speed servers for instant access',
+    title: 'Instant Downloads',
+    description: 'Direct high-speed servers. No waiting.',
   },
   {
-    icon: Users,
-    title: 'Curated by Real DJs',
-    description: 'Music selected by working professionals who know what works',
+    icon: Award,
+    title: '40TB+ Library',
+    description: 'Massive archive of music spanning decades',
+  },
+  {
+    icon: Smartphone,
+    title: 'Mobile Ready',
+    description: 'Optimized for any device, anywhere, anytime.',
   },
 ];
 
@@ -62,7 +67,7 @@ export function WhyJoin() {
               >
                 {/* Glow Effect on Hover */}
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                
+
                 <div className="relative z-10">
                   <div className="inline-block p-3 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg mb-4 group-hover:scale-110 transition-transform">
                     <Icon size={28} className="text-white" />

@@ -1,9 +1,12 @@
-cat > ~/dj_dashboard/server.js <<EOF
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios'); // NECESARIO PARA EL STREAMING SEGURO
+import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
@@ -24,7 +27,7 @@ let db = [];
 try {
     const rawData = fs.readFileSync(dbPath, 'utf-8');
     db = JSON.parse(rawData);
-    console.log(\`✅ ¡ÉXITO! \${db.length} archivos cargados en memoria.\`);
+    console.log(`✅ ¡ÉXITO! ${db.length} archivos cargados en memoria.`);
 } catch (error) {
     console.error("❌ ERROR: No encuentro tracks_master.json");
 }
@@ -33,8 +36,8 @@ try {
 app.get('/api/search', (req, res) => {
     const query = req.query.q ? req.query.q.toLowerCase() : '';
     if (query.length < 2) return res.json([]);
-    
-    const results = db.filter(item => 
+
+    const results = db.filter(item =>
         item.name && item.name.toLowerCase().includes(query)
     ).slice(0, 100);
 
@@ -50,7 +53,7 @@ app.get('/api/stream', async (req, res) => {
     // 2. Construimos la URL secreta hacia Hetzner
     // Codificamos la ruta para que los espacios y acentos no rompan el link
     const encodedPath = trackPath.split('/').map(encodeURIComponent).join('/');
-    const secureUrl = \`https://\${STORAGE_CONFIG.user}:\${STORAGE_CONFIG.pass}@\${STORAGE_CONFIG.host}\${encodedPath}\`;
+    const secureUrl = `https://${STORAGE_CONFIG.user}:${STORAGE_CONFIG.pass}@${STORAGE_CONFIG.host}${encodedPath}`;
 
     try {
         // 3. El servidor pide el archivo a Hetzner
@@ -61,8 +64,14 @@ app.get('/api/stream', async (req, res) => {
         });
 
         // 4. Se lo pasamos al usuario (Pipe)
-        // Ponemos las cabeceras correctas para que sea un archivo de audio
         res.setHeader('Content-Type', 'audio/mpeg');
+
+        // Si pide descargar, forzamos el nombre de archivo
+        if (req.query.download === 'true') {
+            const filename = path.basename(trackPath);
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        }
+
         response.data.pipe(res);
 
     } catch (error) {
@@ -74,6 +83,5 @@ app.get('/api/stream', async (req, res) => {
 // --- ENCENDER ---
 const PORT = 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(\`\n🚀 SERVIDOR SEGURO ONLINE EN PUERTO \${PORT}\`);
+    console.log(`\n🚀 SERVIDOR SEGURO ONLINE EN PUERTO ${PORT}`);
 });
-EOF

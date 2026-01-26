@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '../../supabase'; 
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { supabase } from '../../supabase';
 import { Folder, Download, ArrowLeft, Home, ChevronRight, Disc, Play, Pause, Music2 } from 'lucide-react';
 
 const STORAGE_BASE = "https://u529624-sub1:Gandola2026!@u529624-sub1.your-storagebox.de";
@@ -7,7 +7,7 @@ const STORAGE_BASE = "https://u529624-sub1:Gandola2026!@u529624-sub1.your-storag
 const MONTH_ORDER: Record<string, number> = {
   'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4, 'MAYO': 5, 'JUNIO': 6,
   'JULIO': 7, 'AGOSTO': 8, 'SEPTIEMBRE': 9, 'OCTUBRE': 10, 'NOVIEMBRE': 11, 'DICIEMBRE': 12,
-  'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6, 
+  'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
   'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12
 };
 
@@ -21,7 +21,7 @@ interface DJPacksProps {
 // ✅ Exportación por defecto para coincidir con el import de App.tsx
 export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPacksProps) {
   const [fileSystem, setFileSystem] = useState<any>({ name: 'root', type: 'year', children: {} });
-  const [currentPath, setCurrentPath] = useState<string[]>([]); 
+  const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [songs, setSongs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingSongs, setLoadingSongs] = useState(false);
@@ -72,24 +72,55 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
     });
   }, [fileSystem, currentPath]);
 
+  // ✅ Ref para evitar "Race Conditions" (que se mezclen canciones de carpetas distintas)
+  const activeFolderRef = useRef<string | null>(null);
+
+  // ✅ Función reutilizable para cargar canciones
+  const loadPackSongs = async (packData: any) => {
+    if (!packData) return;
+
+    // 1. Guardamos qué carpeta estamos cargando AHORA
+    const currentFolder = packData.original_folder;
+    activeFolderRef.current = currentFolder;
+
+    setLoadingSongs(true);
+    setSongs([]); // Limpiamos visualmente la anterior inmediatamente
+
+    const { data } = await supabase
+      .from('dj_tracks')
+      .select('*')
+      .eq('original_folder', currentFolder) // Usamos la var local
+      .eq('format', 'file');
+
+    // 2. Solo actualizamos si el usuario NO ha cambiado de carpeta mientras cargaba
+    if (activeFolderRef.current === currentFolder) {
+      setSongs(data || []);
+      setLoadingSongs(false);
+    }
+  };
+
   const handleFolderClick = async (item: any) => {
     const newPath = [...currentPath, item.name];
     setCurrentPath(newPath);
 
     if (item.type === 'pack' && item.data) {
       setIsInsidePack(true);
-      setLoadingSongs(true);
-      // ✅ Búsqueda flexible por original_folder
-      const { data } = await supabase
-        .from('dj_tracks')
-        .select('*')
-        .eq('original_folder', item.data.original_folder)
-        .eq('format', 'file');
-
-      setSongs(data || []);
-      setLoadingSongs(false);
+      await loadPackSongs(item.data);
     } else {
       setIsInsidePack(false);
+    }
+  };
+
+  // Helper para recargar el pack actual
+  const refreshCurrentPack = () => {
+    // Necesitamos recuperar la data del pack actual. 
+    // Navegamos el fileSystem usando currentPath.
+    let current: any = fileSystem;
+    for (const p of currentPath) {
+      if (current.children && current.children[p]) current = current.children[p];
+    }
+    if (current && current.type === 'pack' && current.data) {
+      loadPackSongs(current.data);
     }
   };
 
@@ -106,12 +137,12 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
       {/* NAVEGACIÓN */}
       <div className="flex items-center gap-2 mb-8 overflow-x-auto py-2 no-scrollbar border-b border-white/5 pb-6">
         <button onClick={goHome} className="p-2 hover:bg-white/5 rounded-lg text-gray-500 transition-colors">
-          <Home size={18}/>
+          <Home size={18} />
         </button>
         {currentPath.map((p, i) => (
           <div key={i} className="flex items-center gap-2 flex-shrink-0">
             <ChevronRight size={14} className="text-gray-800" />
-            <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${i === currentPath.length -1 ? 'text-[#ff0055]' : 'text-gray-600'}`}>
+            <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${i === currentPath.length - 1 ? 'text-[#ff0055]' : 'text-gray-600'}`}>
               {p}
             </span>
           </div>
@@ -123,9 +154,9 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
           <button onClick={goBack} className="mb-4 flex items-center gap-2 text-[10px] font-black text-[#ff0055] hover:text-white uppercase tracking-[0.3em] transition-colors">
             <ArrowLeft size={14} /> Back to Packs
           </button>
-          
+
           {loadingSongs ? (
-             <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading Library...</div>
+            <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading Library...</div>
           ) : songs.length > 0 ? songs.map((track) => {
             const isActive = currentTrack && (currentTrack.id === track.id || currentTrack.title === track.name);
             const isPlayingCurrent = isActive && isPlaying;
@@ -142,12 +173,25 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
                     <div className="md:col-span-5 text-left">
                       <h3 className={`font-bold truncate uppercase tracking-tight text-sm transition-colors ${isActive ? 'text-[#ff0055]' : 'text-white group-hover:text-[#ff0055]'}`}>{track.name}</h3>
                       <div className="flex items-center gap-2">
-                          <Music2 size={10} className="text-gray-600"/>
-                          <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider truncate">Mastered Audio • Studio Quality</p>
+                        <Music2 size={10} className="text-gray-600" />
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider truncate">Mastered Audio • Studio Quality</p>
                       </div>
                     </div>
                     <div className="md:col-span-1 flex justify-end items-center">
-                      <a href={`${STORAGE_BASE}${track.server_path}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#ff0055] text-white hover:scale-105 shadow-[0_0_10px_rgba(255,0,85,0.3)] transition-all">
+                      <a
+                        href={`http://localhost:3000/api/stream?path=${encodeURIComponent(track.server_path)}&download=true`}
+                        onClick={async () => {
+                          // Registro silencioso de la descarga
+                          if (user) {
+                            await supabase.from('downloads').insert({
+                              user_id: user.id,
+                              track_title: track.name,
+                              track_path: track.server_path
+                            });
+                          }
+                        }}
+                        className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#ff0055] text-white hover:scale-105 shadow-[0_0_10px_rgba(255,0,85,0.3)] transition-all"
+                      >
                         <Download size={16} />
                       </a>
                     </div>
@@ -156,8 +200,14 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
               </div>
             );
           }) : (
-            <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl">
-              <p className="text-gray-600 font-black uppercase text-[10px] tracking-widest">No tracks found in this folder</p>
+            <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl flex flex-col items-center gap-4">
+              <p className="text-gray-600 font-black uppercase text-[10px] tracking-widest">No tracks found (Syncing?)</p>
+              <button
+                onClick={refreshCurrentPack}
+                className="flex items-center gap-2 px-6 py-2 bg-[#ff0055]/10 border border-[#ff0055]/20 text-[#ff0055] rounded-full text-[10px] font-black uppercase hover:bg-[#ff0055] hover:text-white transition-all"
+              >
+                Refresh Folder
+              </button>
             </div>
           )}
         </div>

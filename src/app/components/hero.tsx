@@ -75,15 +75,19 @@ export function Hero({ onJoinClick }: HeroProps) {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="flex justify-center items-center"
+          className="flex flex-col items-center gap-6"
         >
-          <button 
-            onClick={onJoinClick}
-            className="group px-12 py-5 bg-gradient-to-r from-[#ff0055] to-[#ff6b00] text-white rounded-xl text-xl font-black uppercase tracking-widest hover:shadow-[0_0_40px_rgba(255,0,85,0.4)] hover:scale-105 transition-all duration-300 flex items-center gap-3"
-          >
-            Join the Pool
-            <ChevronRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
-          </button>
+          <div className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-full pl-6 pr-2 py-2">
+            <span className="text-[#ff0055] font-black text-xl">$24.99</span>
+            <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">/ Month</span>
+            <button
+              onClick={onJoinClick}
+              className="px-8 py-3 bg-[#ff0055] text-white rounded-full text-sm font-black uppercase tracking-widest hover:bg-[#ff0055]/80 hover:scale-105 transition-all"
+            >
+              Get Access
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Cancel Anytime • Instant Access</p>
         </motion.div>
 
         {/* Stats */}
@@ -94,16 +98,16 @@ export function Hero({ onJoinClick }: HeroProps) {
           className="mt-20 grid grid-cols-3 gap-8 max-w-3xl mx-auto"
         >
           <div className="text-center">
-            <div className="text-4xl font-bold text-[#ff0055] mb-2 uppercase">50K+</div>
-            <div className="text-gray-400 text-xs font-black uppercase tracking-widest">Tracks</div>
+            <div className="text-4xl font-bold text-[#ff0055] mb-2 uppercase">40TB+</div>
+            <div className="text-gray-400 text-xs font-black uppercase tracking-widest">Library Size</div>
           </div>
           <div className="text-center">
-            <div className="text-4xl font-bold text-[#ff6b00] mb-2 uppercase">10K+</div>
-            <div className="text-gray-400 text-xs font-black uppercase tracking-widest">DJs</div>
+            <div className="text-4xl font-bold text-[#ff6b00] mb-2 uppercase">Daily</div>
+            <div className="text-gray-400 text-xs font-black uppercase tracking-widest">Exclusives</div>
           </div>
           <div className="text-center">
-            <div className="text-4xl font-bold text-[#00d4ff] mb-2 uppercase">Daily</div>
-            <div className="text-gray-400 text-xs font-black uppercase tracking-widest">Updates</div>
+            <div className="text-4xl font-bold text-[#00d4ff] mb-2 uppercase">HQ</div>
+            <div className="text-gray-400 text-xs font-black uppercase tracking-widest">WAV / MP3</div>
           </div>
         </motion.div>
       </div>
