@@ -43,7 +43,15 @@ export function getTrackUrl(track: Track, asDownload: boolean = false): string {
         return `${cleanStorageUrl}/${encodedPath}${asDownload ? '?download=true' : ''}`;
     }
 
-    // 3. Fallback to API Proxy
+    // 3. Fallback to API Proxy (Serverless /api/stream)
+    // When running on Vercel, this points to the internal /api/stream function
     const query = `path=${encodeURIComponent(path)}${asDownload ? '&download=true' : ''}`;
-    return `${API_URL}/api/stream?${query}`;
+
+    // Check if we have a full external API_URL configured (e.g. Tunnel)
+    if (API_URL && API_URL.startsWith('http')) {
+        return `${API_URL}/api/stream?${query}`;
+    }
+
+    // Default to relative path for Serverless (Same Domain)
+    return `/api/stream?${query}`;
 }
