@@ -15,7 +15,7 @@ type Props = {
 
 export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Props) {
   const { user } = useAuth();
-  const { currentTrack } = usePlayer();
+  const { currentTrack, nextTrack, prevTrack } = usePlayer();
   const audioRef = useRef<HTMLAudioElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
@@ -115,11 +115,11 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            <SkipBack size={18} className="text-gray-400 hover:text-white cursor-pointer" />
+            <SkipBack size={18} onClick={prevTrack} className="text-gray-400 hover:text-white cursor-pointer" />
             <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={onTogglePlay} className="w-9 h-9 flex items-center justify-center rounded-full bg-white text-black hover:bg-[#ff0055] hover:text-white transition-colors">
               {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
             </motion.button>
-            <SkipForward size={18} className="text-gray-400 hover:text-white cursor-pointer" />
+            <SkipForward size={18} onClick={nextTrack} className="text-gray-400 hover:text-white cursor-pointer" />
           </div>
 
           <div className="flex-1 flex items-center gap-3">

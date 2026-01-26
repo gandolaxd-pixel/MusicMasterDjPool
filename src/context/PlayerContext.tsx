@@ -6,10 +6,14 @@ import { getTrackUrl } from '../utils/urlUtils';
 interface PlayerContextType {
     currentTrack: Track | null;
     isPlaying: boolean;
+    queue: Track[];
     playTrack: (track: Track) => void;
+    playQueue: (tracks: Track[], startIndex?: number) => void;
     togglePlay: () => void;
     play: () => void;
     pause: () => void;
+    nextTrack: () => void;
+    prevTrack: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -17,6 +21,8 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [queue, setQueue] = useState<Track[]>([]);
+    const [currentIndex, setCurrentIndex] = useState<number>(-1);
 
     const playTrack = (track: Track) => {
         // Normalizar track para asegurar compatibilidad
@@ -36,7 +42,53 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 normalizedTrack.streamUrl = getTrackUrl(normalizedTrack);
             }
             setCurrentTrack(normalizedTrack);
+            // If playing a single track, it becomes the only item in queue or just current
+            // For simplicity, let's say playing a single track clears queue or adds to it?
+            // Let's just set it as current and clear queue to avoid confusion unless we want to keep context
+            setQueue([normalizedTrack]);
+            setCurrentIndex(0);
             setIsPlaying(true);
+        }
+    };
+
+    const playQueue = (tracks: Track[], startIndex = 0) => {
+        if (!tracks || tracks.length === 0) return;
+
+        // Normalize all
+        const normalizedTracks = tracks.map(t => ({
+            ...t,
+            id: t.id || t.name || 'unknown-id',
+            title: t.title || t.name || 'Unknown Title',
+            streamUrl: t.streamUrl || getTrackUrl(t),
+            file_path: t.file_path || t.server_path || '',
+        }));
+
+        setQueue(normalizedTracks);
+        setCurrentIndex(startIndex);
+        setCurrentTrack(normalizedTracks[startIndex]);
+        setIsPlaying(true);
+    };
+
+    const nextTrack = () => {
+        if (queue.length === 0) return;
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < queue.length) {
+            setCurrentIndex(nextIndex);
+            setCurrentTrack(queue[nextIndex]);
+            setIsPlaying(true);
+        }
+    };
+
+    const prevTrack = () => {
+        if (queue.length === 0) return;
+        const prevIndex = currentIndex - 1;
+        if (prevIndex >= 0) {
+            setCurrentIndex(prevIndex);
+            setCurrentTrack(queue[prevIndex]);
+            setIsPlaying(true);
+        } else {
+            // Optional: restart current track if at beginning?
+            // For now just do nothing or maybe reset time
         }
     };
 
@@ -45,7 +97,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const pause = () => setIsPlaying(false);
 
     return (
-        <PlayerContext.Provider value={{ currentTrack, isPlaying, playTrack, togglePlay, play, pause }}>
+        <PlayerContext.Provider value={{ currentTrack, isPlaying, queue, playTrack, playQueue, togglePlay, play, pause, nextTrack, prevTrack }}>
             {children}
         </PlayerContext.Provider>
     );

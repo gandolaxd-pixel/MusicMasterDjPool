@@ -16,7 +16,7 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGenre, onGenreSelect, featuredPack, loading }) => {
-    const { playTrack, currentTrack, isPlaying } = usePlayer();
+    const { playTrack, playQueue, currentTrack, isPlaying } = usePlayer();
     const { crate, toggleCrate } = useCrate();
 
     // Helper to get tracks from a pack
@@ -34,17 +34,16 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                 .select('*')
                 .eq('original_folder', featuredPack.original_folder)
                 .eq('format', 'file') // Get songs, not sub-packs
-                .limit(1); // Get first song to play
+                .limit(50); // Get tracks for the queue
 
             if (data && data.length > 0) {
-                const firstSong = data[0];
                 // Map to player track format
-                const playerTrack = {
-                    ...firstSong,
-                    title: firstSong.name || firstSong.title,
-                    file_path: firstSong.server_path || firstSong.file_path,
-                };
-                playTrack(playerTrack);
+                const queue = data.map(song => ({
+                    ...song,
+                    title: song.name || song.title,
+                    file_path: song.server_path || song.file_path,
+                }));
+                playQueue(queue);
             } else {
                 console.warn("No songs found in this pack to play.");
             }
