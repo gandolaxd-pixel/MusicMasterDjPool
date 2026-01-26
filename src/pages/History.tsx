@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { Download, Calendar, Music2, Play, Pause } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
+import { getTrackUrl } from '../utils/urlUtils';
 
 interface DownloadRecord {
     id: string;
@@ -79,7 +80,15 @@ export const HistoryPage = ({ user }: { user: any }) => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <a
-                                        href={`http://localhost:3000/api/stream?path=${encodeURIComponent(item.track_path)}&download=true`}
+                                        href={getTrackUrl({
+                                            id: item.id,
+                                            title: item.track_title,
+                                            track_title: item.track_title, // Compatibilidad
+                                            file_path: item.track_path,
+                                            server_path: item.track_path
+                                        } as any, true)}
+                                        download
+                                        target="_self"
                                         className="px-4 py-2 bg-[#ff0055]/10 border border-[#ff0055]/20 text-[#ff0055] hover:bg-[#ff0055] hover:text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
                                     >
                                         <Download size={12} /> Download Again
