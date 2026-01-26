@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { usePlayer } from '../../context/PlayerContext';
 import { motion } from 'framer-motion';
 import { Play, Pause, SkipBack, SkipForward, Disc, Download, Volume2, VolumeX } from 'lucide-react';
+import { getTrackUrl } from '../../utils/urlUtils';
 
 type Props = {
   url: string;
@@ -150,7 +151,7 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
 
             <motion.a
               whileHover={{ scale: 1.05 }}
-              href={currentTrack ? `http://localhost:3000/api/stream?path=${encodeURIComponent(currentTrack.file_path || currentTrack.filename || '')}&download=true` : '#'}
+              href={currentTrack ? getTrackUrl(currentTrack, true) : '#'}
               onClick={async (e) => {
                 if (currentTrack && user) {
                   // Recording download logic
