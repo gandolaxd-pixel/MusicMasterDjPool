@@ -34,6 +34,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).send("Missing path parameter");
     }
 
+    // 🛡️ SECURITY: Explicitly block path traversal attempts
+    if (trackPath.includes('..') || trackPath.includes('\0')) {
+        console.error(`❌ Security Alert: Path traversal attempt blocked: ${trackPath}`);
+        return res.status(403).send("Forbidden: Invalid path");
+    }
+
     // Ensure path has leading slash
     let cleanPath = trackPath.startsWith('/') ? trackPath : '/' + trackPath;
 
