@@ -152,6 +152,8 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
             <motion.a
               whileHover={{ scale: 1.05 }}
               href={currentTrack ? getTrackUrl(currentTrack, true) : '#'}
+              download
+              target="_self"
               onClick={async (e) => {
                 if (currentTrack && user) {
                   // Recording download logic

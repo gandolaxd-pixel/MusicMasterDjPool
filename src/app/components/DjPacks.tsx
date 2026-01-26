@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../supabase';
 import { Folder, Download, ArrowLeft, Home, ChevronRight, Disc, Play, Pause, Music2 } from 'lucide-react';
 
-const STORAGE_BASE = "https://u529624-sub1:Gandola2026!@u529624-sub1.your-storagebox.de";
+import { getTrackUrl } from '../../utils/urlUtils';
 
 const MONTH_ORDER: Record<string, number> = {
   'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4, 'MAYO': 5, 'JUNIO': 6,
@@ -179,7 +179,9 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
                     </div>
                     <div className="md:col-span-1 flex justify-end items-center">
                       <a
-                        href={`http://localhost:3000/api/stream?path=${encodeURIComponent(track.server_path)}&download=true`}
+                        href={getTrackUrl({ ...track, file_path: track.server_path }, true)}
+                        download
+                        target="_self"
                         onClick={async () => {
                           // Registro silencioso de la descarga
                           if (user) {
