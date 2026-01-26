@@ -60,9 +60,10 @@ export function MembershipPlans({ onSelectPlan }: MembershipPlansProps) {
               transition={{ duration: 0.5, delay: index * 0.1 }}
               whileHover={{
                 scale: 1.02,
-                y: -5
+                y: -5,
+                transition: { duration: 0.3 }
               }}
-              className={`relative bg-white/[0.03] backdrop-blur-xl border rounded-3xl p-8 transition-all duration-500 ${plan.popular
+              className={`relative bg-white/[0.03] backdrop-blur-xl border rounded-3xl p-8 ${plan.popular
                 ? 'border-[#ff0055] shadow-[0_0_40px_rgba(255,0,85,0.2)] py-12'
                 : 'border-white/10'
                 }`}

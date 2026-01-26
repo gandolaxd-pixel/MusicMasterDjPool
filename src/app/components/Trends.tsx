@@ -27,8 +27,8 @@ export function Trends({ tracks }: TrendsProps) {
   const activities = useMemo(() => {
     if (!tracks || tracks.length === 0) return [];
 
-    // Create 20 fake activities
-    return Array.from({ length: 20 }).map((_, i) => {
+    // Create 10 fake activities
+    return Array.from({ length: 10 }).map((_, i) => {
       const user = FAKE_USERS[i % FAKE_USERS.length];
       const track = tracks[i % tracks.length];
       return {
