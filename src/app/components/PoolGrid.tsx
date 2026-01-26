@@ -60,27 +60,11 @@ const PoolGrid: React.FC = () => {
     };
 
     useEffect(() => {
-        const fetchBrands = async () => {
-            setLoading(true);
-            try {
-                const { data, error } = await supabase
-                    .from('dj_tracks')
-                    .select('pool_id')
-                    .eq('format', 'pool');
-
-                if (!error && data) {
-                    const uniqueBrands = [...new Set(data.map((item: { pool_id: string }) => item.pool_id))];
-                    const filteredBrands = uniqueBrands.filter(name =>
-                        name && Object.keys(specialNames).includes(name)
-                    );
-                    setBrandList(filteredBrands.sort());
-                }
-            } catch (err) {
-                console.error("Error fetching brands:", err);
-            }
-            setLoading(false);
-        };
-        if (view === 'brands') fetchBrands();
+        // Mostrar todos los pools definidos en specialNames, sin depender de la base de datos
+        if (view === 'brands') {
+            const allPools = Object.keys(specialNames).sort();
+            setBrandList(allPools);
+        }
     }, [view]);
 
     useEffect(() => {
