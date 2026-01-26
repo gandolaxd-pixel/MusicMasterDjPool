@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import { Track } from '../types';
 import { API_URL } from '../config';
+import { getTrackUrl } from '../utils/urlUtils';
 
 interface PlayerContextType {
     currentTrack: Track | null;
@@ -30,12 +31,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (currentTrack && (currentTrack.id === normalizedTrack.id || currentTrack.title === normalizedTrack.title)) {
             setIsPlaying(!isPlaying);
         } else {
-            // Generar URL de stream si no existe
+            // Generate Stream URL using central utility
             if (!normalizedTrack.streamUrl) {
-                const path = normalizedTrack.file_path || normalizedTrack.filename;
-                if (path) {
-                    normalizedTrack.streamUrl = `${API_URL}/api/stream?path=${encodeURIComponent(path)}`;
-                }
+                normalizedTrack.streamUrl = getTrackUrl(normalizedTrack);
             }
             setCurrentTrack(normalizedTrack);
             setIsPlaying(true);
