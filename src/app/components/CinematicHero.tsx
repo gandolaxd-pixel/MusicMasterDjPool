@@ -35,7 +35,7 @@ export function CinematicHero({ onPlay, pack, loading }: CinematicHeroProps) {
             {/* Background Image with Cinematic Gradient */}
             <div className="absolute inset-0 z-0">
                 <img
-                    src="https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?q=80&w=2070&auto=format&fit=crop"
+                    src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=2070&auto=format&fit=crop"
                     alt="Featured DJ Pack"
                     className="w-full h-full object-cover"
                 />
