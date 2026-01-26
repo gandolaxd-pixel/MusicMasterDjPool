@@ -42,8 +42,8 @@ const PoolGrid: React.FC = () => {
         "Cuban Pool": "Cuban-Pool.png",
         "Dale Mas Bajo": "Dale-Mas-Bajo.png",
         "Elite Remix": "Elite-Remix.png",
-        "BPM Supreme": "bpm-supreme.png",
-        "DJ City": "dj-city.png",
+        "BPM Supreme": "bpmsupreme.png",
+        "DJ City": "djcity.png",
         "8th Wonder": "8thwonder.png",
         "Beat Junkies": "beatjunkies.png",
         "BPM Latino": "bpmlatino.png",
@@ -56,7 +56,9 @@ const PoolGrid: React.FC = () => {
         "Hyperz": "hyperz.png",
         "My Mp3 Pool": "mymp3pool.png",
         "Remix Planet": "remixplanet.png",
-        "The Mash Up": "themashup.png"
+        "The Mash Up": "themashup.png",
+        "Are You Kiddy": "areyoukidy.png",
+        "DMP": "dmp.png"
     };
 
     useEffect(() => {
