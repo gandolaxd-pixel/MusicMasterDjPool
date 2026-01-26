@@ -71,13 +71,13 @@ export function CinematicHero({ onPlay, pack, loading }: CinematicHeroProps) {
                                 <h1 className="text-6xl md:text-8xl font-black text-white leading-[0.9] italic tracking-tighter uppercase drop-shadow-2xl">
                                     {pack ? (
                                         <>
-                                            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400">{firstPart}</span>
+                                            <span className="text-white drop-shadow-md">{firstPart}</span>
                                             <br />
                                             <span className="text-4xl md:text-6xl text-[#ff0055]">{secondPart}</span>
                                         </>
                                     ) : (
                                         <>
-                                            La <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">Rompe</span>
+                                            La <span className="text-white">Rompe</span>
                                             <br />
                                             <span className="text-4xl md:text-6xl text-[#ff0055]">Discoteca Vol. 4</span>
                                         </>
