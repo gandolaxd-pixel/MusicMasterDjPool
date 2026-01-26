@@ -57,14 +57,27 @@ app.get('/api/stream', async (req, res) => {
 
     try {
         // 3. El servidor pide el archivo a Hetzner
+        // Si el cliente pide un rango (para saltar al minuto X), lo reenviamos
+        const headers = {};
+        if (req.headers.range) {
+            headers['Range'] = req.headers.range;
+        }
+
         const response = await axios({
             method: 'get',
             url: secureUrl,
-            responseType: 'stream' // Importante: lo bajamos como flujo de datos
+            responseType: 'stream', // Importante: lo bajamos como flujo de datos
+            headers: headers,
+            validateStatus: (status) => status >= 200 && status < 300 // Aceptamos 200 y 206
         });
 
         // 4. Se lo pasamos al usuario (Pipe)
-        res.setHeader('Content-Type', 'audio/mpeg');
+        // Reenviamos las cabeceras clave para que el navegador sepa que puede hacer "seek"
+        res.status(response.status); // 200 o 206
+        if (response.headers['content-range']) res.setHeader('Content-Range', response.headers['content-range']);
+        if (response.headers['accept-ranges']) res.setHeader('Accept-Ranges', response.headers['accept-ranges']);
+        if (response.headers['content-length']) res.setHeader('Content-Length', response.headers['content-length']);
+        res.setHeader('Content-Type', response.headers['content-type'] || 'audio/mpeg');
 
         // Si pide descargar, forzamos el nombre de archivo
         if (req.query.download === 'true') {
