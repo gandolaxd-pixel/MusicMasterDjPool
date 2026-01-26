@@ -41,14 +41,17 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
   // Handle Spacebar to Toggle Play/Pause
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input or textarea
+      // Ignore if user is typing in a text-based input or textarea
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      const isTextInput = target.tagName === 'INPUT' &&
+        ['text', 'search', 'password', 'email', 'number'].includes((target as HTMLInputElement).type);
+
+      if (isTextInput || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
 
       if (e.code === 'Space') {
-        e.preventDefault(); // Prevent scrolling
+        e.preventDefault(); // Prevent scrolling and default range interactions
         onTogglePlay();
       }
     };
