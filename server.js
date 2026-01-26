@@ -52,7 +52,13 @@ app.get('/api/stream', async (req, res) => {
 
     // 2. Construimos la URL secreta hacia Hetzner
     // Codificamos la ruta para que los espacios y acentos no rompan el link
-    const encodedPath = trackPath.split('/').map(encodeURIComponent).join('/');
+    let encodedPath = trackPath.split('/').map(encodeURIComponent).join('/');
+
+    // Aseguramos que empiece por / para que se concatene bien con el host
+    if (!encodedPath.startsWith('/')) {
+        encodedPath = '/' + encodedPath;
+    }
+
     const secureUrl = `https://${STORAGE_CONFIG.user}:${STORAGE_CONFIG.pass}@${STORAGE_CONFIG.host}${encodedPath}`;
 
     try {
