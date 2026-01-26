@@ -22,8 +22,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
     }
 
+    // Validate Configuration
     if (!STORAGE_CONFIG.user || !STORAGE_CONFIG.pass) {
-        console.error("❌ Missing Storage Credentials in Environment Variables");
+        console.error("❌ CRITICAL: Missing Storage Credentials in Environment Variables (STORAGE_USER, STORAGE_PASS)");
         return res.status(500).json({ error: "Server Configuration Error: Missing Storage Credentials" });
     }
 
@@ -34,13 +35,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Ensure path has leading slash
-    let cleanPath = trackPath;
-    if (!cleanPath.startsWith('/')) {
-        cleanPath = '/' + cleanPath;
-    }
+    let cleanPath = trackPath.startsWith('/') ? trackPath : '/' + trackPath;
 
-    // Encode path components
-    const encodedPath = cleanPath.split('/').map(encodeURIComponent).join('/');
+    // Encode path components for the URL (preserving slashes)
+    // Example: /Musica/Techno/My Song.mp3 -> /Musica/Techno/My%20Song.mp3
+    const encodedPath = cleanPath.split('/').map(segment => encodeURIComponent(segment)).join('/');
+
+    // Construct authenticated URL
     const secureUrl = `https://${STORAGE_CONFIG.user}:${STORAGE_CONFIG.pass}@${STORAGE_CONFIG.host}${encodedPath}`;
 
     try {
@@ -57,8 +58,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             validateStatus: (status) => status >= 200 && status < 300
         });
 
-        // Forward important headers
-        res.status(response.status);
+        // Forward important headers for streaming/seeking
+        res.status(response.status); // 200 or 206
+
         if (response.headers['content-range']) res.setHeader('Content-Range', response.headers['content-range']);
         if (response.headers['accept-ranges']) res.setHeader('Accept-Ranges', response.headers['accept-ranges']);
         if (response.headers['content-length']) res.setHeader('Content-Length', response.headers['content-length']);
@@ -66,20 +68,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const contentType = response.headers['content-type'] || 'audio/mpeg';
         res.setHeader('Content-Type', contentType);
 
-        // Handle Download
+        // Handle Download properly
         if (download === 'true') {
             const filename = basename(cleanPath);
-            // Use encodeURIComponent for filename to handle special chars safe in header
-            res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+            // Robust filename handling
+            const encodedFilename = encodeURIComponent(filename);
+            res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"; filename*=UTF-8''${encodedFilename}`);
         }
 
         // Pipe data to response
         response.data.pipe(res);
 
     } catch (error: any) {
-        console.error("❌ Audio Stream Error:", cleanPath, error.message);
+        console.error(`❌ Audio Stream Error for path: ${cleanPath}`);
         if (error.response) {
-            console.error("Storage Status:", error.response.status);
+            console.error(`Storage Response: ${error.response.status} ${error.response.statusText}`);
+        } else {
+            console.error(`Error details: ${error.message}`);
         }
         res.status(404).send("Audio not found or inaccessible.");
     }
