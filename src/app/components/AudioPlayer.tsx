@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { usePlayer } from '../../context/PlayerContext';
 import { motion } from 'framer-motion';
-import { Play, Pause, SkipBack, SkipForward, Disc, Download, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Flame, Download, Volume2, VolumeX } from 'lucide-react';
 import { getTrackUrl } from '../../utils/urlUtils';
 
 type Props = {
@@ -122,8 +122,15 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
 
           <div className="flex items-center gap-3 min-w-[150px] md:min-w-[200px] max-w-[250px]">
             <div className="relative flex-shrink-0">
-              <motion.div animate={isPlaying ? { rotate: 360 } : {}} transition={{ duration: 3, repeat: Infinity, ease: "linear" }}>
-                <Disc size={38} className={`${isPlaying ? 'text-[#ff0055]' : 'text-gray-500'} transition-colors duration-500`} />
+              <motion.div
+                animate={isPlaying ? {
+                  scale: [1, 1.15, 1],
+                  opacity: [0.8, 1, 0.8],
+                  filter: ["drop-shadow(0 0 0px rgba(255, 69, 0, 0))", "drop-shadow(0 0 10px rgba(255, 69, 0, 0.6))", "drop-shadow(0 0 0px rgba(255, 69, 0, 0))"]
+                } : { scale: 1, opacity: 0.5 }}
+                transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Flame size={32} className={`${isPlaying ? 'text-[#ff4500]' : 'text-gray-500'} transition-colors duration-500`} fill={isPlaying ? "#ff4500" : "none"} />
               </motion.div>
             </div>
             <div className="flex flex-col overflow-hidden">
