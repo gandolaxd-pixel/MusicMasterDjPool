@@ -11,6 +11,12 @@ import { Track } from '../types';
 export function getTrackUrl(track: Track, asDownload: boolean = false): string {
     // 1. Check for absolute URL
     if (track.streamUrl && track.streamUrl.startsWith('http')) {
+        if (asDownload) {
+            const separator = track.streamUrl.includes('?') ? '&' : '?';
+            return track.streamUrl.includes('download=true')
+                ? track.streamUrl
+                : `${track.streamUrl}${separator}download=true`;
+        }
         return track.streamUrl;
     }
 
