@@ -27,7 +27,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
         }
 
         try {
-            const { supabase } = await import('../../supabase');
+            const { supabase } = await import('../supabase');
             const { data } = await supabase
                 .from('dj_tracks')
                 .select('*')
