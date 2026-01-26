@@ -38,6 +38,7 @@ const AppContent = () => {
   // ✅ ESTADO LOCAL SOLO PARA GENRES/TRENDS (Opcional mover a Home)
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [realTracks, setRealTracks] = useState<Track[]>([]);
+  const [featuredPack, setFeaturedPack] = useState<any>(null);
 
   const handleGenreSelect = (genreName: string | null) => {
     setSelectedGenre(prev => prev === genreName ? null : genreName);
@@ -59,6 +60,19 @@ const AppContent = () => {
           title: item.title || item.name, // Asegurar title
         }));
         setRealTracks(mappedTracks);
+      }
+
+      // Fetch Featured Pack (Latest Pack)
+      const { data: packData } = await supabase
+        .from('dj_tracks')
+        .select('*')
+        .eq('format', 'pack')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (packData) {
+        setFeaturedPack(packData);
       }
     }
     fetchInit();
@@ -97,6 +111,7 @@ const AppContent = () => {
               selectedGenre={selectedGenre}
               onGenreSelect={handleGenreSelect}
               user={user}
+              featuredPack={featuredPack}
             />}
           />
 

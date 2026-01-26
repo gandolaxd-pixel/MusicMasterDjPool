@@ -4,10 +4,20 @@ import { useNavigate } from 'react-router-dom';
 
 interface CinematicHeroProps {
     onPlay: () => void;
+    pack?: any;
 }
 
-export function CinematicHero({ onPlay }: CinematicHeroProps) {
+export function CinematicHero({ onPlay, pack }: CinematicHeroProps) {
     const navigate = useNavigate();
+
+    // Parse logic for dynamic title
+    const title = pack?.title || pack?.name || "La Rompe Discoteca Vol. 4";
+    const subtitle = pack ? "Featured Pack" : "Latin Tech House";
+
+    // Attempt to split title for visual effect if it's long enough
+    const titleParts = title.split(' ');
+    const firstPart = titleParts.slice(0, Math.ceil(titleParts.length / 2)).join(' ');
+    const secondPart = titleParts.slice(Math.ceil(titleParts.length / 2)).join(' ');
 
     return (
         <section className="relative h-[85vh] w-full overflow-hidden">
@@ -35,19 +45,30 @@ export function CinematicHero({ onPlay }: CinematicHeroProps) {
                                 #1 Trending
                             </span>
                             <span className="text-gray-300 text-[10px] font-bold uppercase tracking-widest border border-white/20 px-2 py-0.5 rounded">
-                                Latin Tech House
+                                {subtitle}
                             </span>
                         </div>
 
                         {/* Giant Typography Title */}
                         <h1 className="text-6xl md:text-8xl font-black text-white leading-[0.9] mb-6 italic tracking-tighter uppercase drop-shadow-2xl">
-                            La <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">Rompe</span>
-                            <br />
-                            <span className="text-4xl md:text-6xl text-[#ff0055]">Discoteca Vol. 4</span>
+                            {pack ? (
+                                <>
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400">{firstPart}</span>
+                                    <br />
+                                    <span className="text-4xl md:text-6xl text-[#ff0055]">{secondPart}</span>
+                                </>
+                            ) : (
+                                <>
+                                    La <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">Rompe</span>
+                                    <br />
+                                    <span className="text-4xl md:text-6xl text-[#ff0055]">Discoteca Vol. 4</span>
+                                </>
+                            )}
                         </h1>
 
                         <p className="text-gray-300 text-lg md:text-xl font-medium mb-8 line-clamp-2 max-w-lg drop-shadow-md">
-                            The ultimate pack for prime-time energy. Featuring exclusive edits of Bad Bunny, Feid, and Karol G mixed with high-energy Tech House drops.
+                            {pack ? `Exclusive access to ${pack.name}. Contains high-quality mastered tracks ready for the club.` :
+                                "The ultimate pack for prime-time energy. Featuring exclusive edits of Bad Bunny, Feid, and Karol G mixed with high-energy Tech House drops."}
                         </p>
 
                         <div className="flex items-center gap-4">
@@ -55,7 +76,7 @@ export function CinematicHero({ onPlay }: CinematicHeroProps) {
                                 onClick={onPlay}
                                 className="flex items-center gap-3 px-8 py-4 bg-white text-black hover:bg-gray-200 rounded-lg text-lg font-bold transition-all shadow-xl hover:scale-105"
                             >
-                                <Play fill="black" size={24} /> Play Now
+                                <Play fill="black" size={24} /> Play Pack
                             </button>
                             <button
                                 onClick={() => navigate('/packs')}

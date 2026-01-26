@@ -11,9 +11,10 @@ interface HomePageProps {
     selectedGenre: string | null;
     onGenreSelect: (genre: string | null) => void;
     user: any;
+    featuredPack?: any; // Nuevo prop para el pack destacado
 }
 
-export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGenre, onGenreSelect }) => {
+export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGenre, onGenreSelect, featuredPack }) => {
     const { playTrack, currentTrack, isPlaying } = usePlayer();
     const { crate, toggleCrate } = useCrate();
 
@@ -21,7 +22,10 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
         <div className="min-h-screen bg-[#0a0a0a] text-white">
             {/* 1. CINEMATIC HERO (Featured Content) - Visual Hook */}
             <div className="relative z-10">
-                <CinematicHero onPlay={() => playTrack(realTracks[0])} />
+                <CinematicHero
+                    onPlay={() => playTrack(featuredPack || realTracks[0])}
+                    pack={featuredPack}
+                />
             </div>
 
             {/* 2. HYBRID DASHBOARD CONTENT */}
