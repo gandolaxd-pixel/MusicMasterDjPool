@@ -24,8 +24,8 @@ export function CinematicHero({ onPlay, pack }: CinematicHeroProps) {
             {/* Background Image with Cinematic Gradient */}
             <div className="absolute inset-0 z-0">
                 <img
-                    src="https://images.unsplash.com/photo-1493225255756-d9584f8606e9?q=80&w=2070&auto=format&fit=crop"
-                    alt="Featured Album"
+                    src="https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?q=80&w=2070&auto=format&fit=crop"
+                    alt="Featured DJ Pack"
                     className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#000] via-[#000]/40 to-transparent" />
