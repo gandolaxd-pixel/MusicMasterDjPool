@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../supabase';
 import { Folder, Download, ArrowLeft, Home, ChevronRight, Disc, Play, Pause, Music2 } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 
 import { getTrackUrl } from '../../utils/urlUtils';
 
@@ -26,6 +27,7 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
   const [loading, setLoading] = useState(false);
   const [loadingSongs, setLoadingSongs] = useState(false);
   const [isInsidePack, setIsInsidePack] = useState(false);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     const fetchStructure = async () => {
@@ -51,11 +53,29 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
           });
         });
         setFileSystem(root);
+
+        // 🔗 Deep Linking Logic
+        const targetFolder = searchParams.get('folder');
+        if (targetFolder) {
+          // Reconstruct path from folder string
+          const parts = targetFolder.split('/').filter(Boolean);
+          // Verify if this path exists in our fileSystem
+          // And calculate the path names for currentPath state
+          const pathNames = parts;
+
+          // Check if it's a valid pack
+          const pack = data.find((p: any) => p.original_folder === targetFolder || p.original_folder === '/' + targetFolder);
+          if (pack) {
+            setCurrentPath(pathNames);
+            setIsInsidePack(true);
+            loadPackSongs(pack);
+          }
+        }
       }
       setLoading(false);
     };
     fetchStructure();
-  }, []);
+  }, [searchParams]); // Added searchParams dependency to re-run if URL changes (though mostly on mount)
 
   const currentItems = useMemo(() => {
     let current = fileSystem;

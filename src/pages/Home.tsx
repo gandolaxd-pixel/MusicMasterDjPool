@@ -18,12 +18,46 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
     const { playTrack, currentTrack, isPlaying } = usePlayer();
     const { crate, toggleCrate } = useCrate();
 
+    // Helper to get tracks from a pack
+    const handlePlayPack = async () => {
+        if (!featuredPack) {
+            // Fallback default behavior
+            playTrack(realTracks[0]);
+            return;
+        }
+
+        try {
+            const { supabase } = await import('../../supabase');
+            const { data } = await supabase
+                .from('dj_tracks')
+                .select('*')
+                .eq('original_folder', featuredPack.original_folder)
+                .eq('format', 'file') // Get songs, not sub-packs
+                .limit(1); // Get first song to play
+
+            if (data && data.length > 0) {
+                const firstSong = data[0];
+                // Map to player track format
+                const playerTrack = {
+                    ...firstSong,
+                    title: firstSong.name || firstSong.title,
+                    file_path: firstSong.server_path || firstSong.file_path,
+                };
+                playTrack(playerTrack);
+            } else {
+                console.warn("No songs found in this pack to play.");
+            }
+        } catch (err) {
+            console.error("Error playing pack:", err);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white">
             {/* 1. CINEMATIC HERO (Featured Content) - Visual Hook */}
             <div className="relative z-10">
                 <CinematicHero
-                    onPlay={() => playTrack(featuredPack || realTracks[0])}
+                    onPlay={handlePlayPack}
                     pack={featuredPack}
                 />
             </div>

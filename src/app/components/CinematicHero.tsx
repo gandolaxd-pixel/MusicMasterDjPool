@@ -79,7 +79,15 @@ export function CinematicHero({ onPlay, pack }: CinematicHeroProps) {
                                 <Play fill="black" size={24} /> Play Pack
                             </button>
                             <button
-                                onClick={() => navigate('/packs')}
+                                onClick={() => {
+                                    if (pack && pack.original_folder) {
+                                        // Remove leading slash if present for cleaner URL, though logic handles both
+                                        const folderParam = pack.original_folder.startsWith('/') ? pack.original_folder.substring(1) : pack.original_folder;
+                                        navigate(`/packs?folder=${encodeURIComponent(pack.original_folder)}`);
+                                    } else {
+                                        navigate('/packs');
+                                    }
+                                }}
                                 className="flex items-center gap-3 px-8 py-4 bg-[#ffffff]/20 backdrop-blur-md border border-white/10 text-white hover:bg-[#ffffff]/30 rounded-lg text-lg font-bold transition-all shadow-xl"
                             >
                                 <Info size={24} /> View Pack
