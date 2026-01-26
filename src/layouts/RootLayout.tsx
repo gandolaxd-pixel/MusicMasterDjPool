@@ -36,7 +36,7 @@ export const RootLayout: React.FC = () => {
                 onSearch={handleSearchWrapper}
             />
 
-            <main className="pt-32 pb-40">
+            <main className={`${location.pathname === '/' ? 'pt-0' : 'pt-32'} pb-40`}>
                 <div className="max-w-7xl mx-auto px-4">
                     <AnimatePresence mode="wait">
                         <motion.div
