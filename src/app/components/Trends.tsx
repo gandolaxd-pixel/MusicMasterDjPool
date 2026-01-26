@@ -3,18 +3,18 @@ import { useMemo } from 'react';
 
 // Fake User Database
 const FAKE_USERS = [
-  { name: "DJ Khalid", avatar: "https://i.pravatar.cc/150?u=1" },
-  { name: "Dj Snake", avatar: "https://i.pravatar.cc/150?u=2" },
-  { name: "David Guetta", avatar: "https://i.pravatar.cc/150?u=3" },
-  { name: "Tiesto", avatar: "https://i.pravatar.cc/150?u=4" },
-  { name: "Skrillex", avatar: "https://i.pravatar.cc/150?u=5" },
-  { name: "Calvin Harris", avatar: "https://i.pravatar.cc/150?u=6" },
-  { name: "Martin Garrix", avatar: "https://i.pravatar.cc/150?u=7" },
-  { name: "Steve Aoki", avatar: "https://i.pravatar.cc/150?u=8" },
-  { name: "Marshmello", avatar: "https://i.pravatar.cc/150?u=9" },
-  { name: "Zedd", avatar: "https://i.pravatar.cc/150?u=10" },
-  { name: "Diplo", avatar: "https://i.pravatar.cc/150?u=11" },
-  { name: "Afrojack", avatar: "https://i.pravatar.cc/150?u=12" },
+  { name: "DJ Lucaz", avatar: "https://i.pravatar.cc/150?u=20" },
+  { name: "Mariano Franco", avatar: "https://i.pravatar.cc/150?u=21" },
+  { name: "DJ K-Libre", avatar: "https://i.pravatar.cc/150?u=22" },
+  { name: "Alex Mix", avatar: "https://i.pravatar.cc/150?u=23" },
+  { name: "DJ Tuto", avatar: "https://i.pravatar.cc/150?u=24" },
+  { name: "Matias J.", avatar: "https://i.pravatar.cc/150?u=25" },
+  { name: "DJ Shadow", avatar: "https://i.pravatar.cc/150?u=26" },
+  { name: "Urban Killaz", avatar: "https://i.pravatar.cc/150?u=27" },
+  { name: "DJ Flow", avatar: "https://i.pravatar.cc/150?u=28" },
+  { name: "Remix King", avatar: "https://i.pravatar.cc/150?u=29" },
+  { name: "DJ Nova", avatar: "https://i.pravatar.cc/150?u=30" },
+  { name: "SoundMaster", avatar: "https://i.pravatar.cc/150?u=31" },
 ];
 
 interface TrendsProps {
