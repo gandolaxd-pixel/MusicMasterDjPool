@@ -103,7 +103,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
 
                 {/* C. TRENDS MARQUEE (Visual Break) */}
                 <div className="py-4">
-                    <Trends />
+                    <Trends tracks={realTracks} />
                 </div>
 
                 {/* D. DATA LIST (Pro Utility) */}

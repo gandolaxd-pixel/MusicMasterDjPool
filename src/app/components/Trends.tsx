@@ -1,63 +1,94 @@
-import { Zap } from 'lucide-react';
+import { Zap, Download } from 'lucide-react';
+import { useMemo } from 'react';
 
-export function Trends() {
+// Fake User Database
+const FAKE_USERS = [
+  { name: "DJ Khalid", avatar: "https://i.pravatar.cc/150?u=1" },
+  { name: "Dj Snake", avatar: "https://i.pravatar.cc/150?u=2" },
+  { name: "David Guetta", avatar: "https://i.pravatar.cc/150?u=3" },
+  { name: "Tiesto", avatar: "https://i.pravatar.cc/150?u=4" },
+  { name: "Skrillex", avatar: "https://i.pravatar.cc/150?u=5" },
+  { name: "Calvin Harris", avatar: "https://i.pravatar.cc/150?u=6" },
+  { name: "Martin Garrix", avatar: "https://i.pravatar.cc/150?u=7" },
+  { name: "Steve Aoki", avatar: "https://i.pravatar.cc/150?u=8" },
+  { name: "Marshmello", avatar: "https://i.pravatar.cc/150?u=9" },
+  { name: "Zedd", avatar: "https://i.pravatar.cc/150?u=10" },
+  { name: "Diplo", avatar: "https://i.pravatar.cc/150?u=11" },
+  { name: "Afrojack", avatar: "https://i.pravatar.cc/150?u=12" },
+];
 
-  const trendingPicks = [
-    { id: 101, title: "Reggaeton Banger", artist: "Exclusive Remix", tag: "HOT", img: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&q=80&w=200" },
-    { id: 102, title: "Urban Latin Pack", artist: "Pro Edit v2", tag: "TRENDING", img: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?auto=format&fit=crop&q=80&w=200" },
-    { id: 103, title: "Dembow Classics", artist: "Club Hype", tag: "NEW", img: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=200" },
-    { id: 104, title: "Tech House Latin", artist: "Dubai Special", tag: "VIRAL", img: "https://images.unsplash.com/photo-1514525253440-b393452e3383?auto=format&fit=crop&q=80&w=200" },
-    { id: 105, title: "Afro House Beats", artist: "Tribal Ritual", tag: "HOT", img: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&q=80&w=200" }
+interface TrendsProps {
+  tracks: any[];
+}
+
+export function Trends({ tracks }: TrendsProps) {
+
+  // Generate fake activity feed based on real tracks
+  const activities = useMemo(() => {
+    if (!tracks || tracks.length === 0) return [];
+
+    // Create 20 fake activities
+    return Array.from({ length: 20 }).map((_, i) => {
+      const user = FAKE_USERS[i % FAKE_USERS.length];
+      const track = tracks[i % tracks.length];
+      return {
+        id: i,
+        user,
+        track,
+        action: "downloaded",
+        time: `${Math.floor(Math.random() * 59) + 1}m Is`
+      };
+    });
+  }, [tracks]);
+
+  // If no tracks yet, show some placeholders
+  const displayItems = activities.length > 0 ? activities : [
+    { id: 999, user: FAKE_USERS[0], track: { title: "Loading...", artist: "..." }, action: "joined" }
   ];
 
-  // Duplicamos para asegurar que siempre haya contenido
-  const marqueeItems = [...trendingPicks, ...trendingPicks, ...trendingPicks, ...trendingPicks];
+  // Duplicamos para el efecto marquee infinito
+  const marqueeItems = [...displayItems, ...displayItems];
 
   return (
-    <section className="relative w-full bg-[#080808] border-y border-white/5 py-6 mt-10 mb-10 overflow-hidden">
+    <section className="relative w-full bg-[#080808] border-y border-white/5 py-4 mt-6 mb-8 overflow-hidden">
 
       {/* Indicador Fijo */}
-      <div className="absolute left-0 top-0 bottom-0 z-20 bg-[#080808]/90 backdrop-blur-lg flex items-center px-8 border-r border-white/10 shadow-[20px_0_40px_rgba(0,0,0,0.8)] pointer-events-none">
+      <div className="absolute left-0 top-0 bottom-0 z-20 bg-[#080808]/90 backdrop-blur-lg flex items-center px-6 border-r border-white/10 shadow-[20px_0_40px_rgba(0,0,0,0.8)] pointer-events-none">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Zap size={16} className="text-[#ff0055] fill-[#ff0055]" />
+            <Zap size={14} className="text-[#ff0055] fill-[#ff0055]" />
             <div className="absolute inset-0 bg-[#ff0055] blur-md opacity-40 animate-pulse"></div>
           </div>
-          <span className="text-[11px] font-black uppercase tracking-[0.4em] text-white">Hot Picks</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Live <span className="text-[#ff0055]">Feed</span></span>
         </div>
       </div>
 
-      {/* Contenedor con Scroll del Trackpad */}
-      <div className="flex overflow-x-auto no-scrollbar scroll-smooth cursor-grab active:cursor-grabbing">
-        <div className="flex animate-marquee items-center gap-16 pl-52 pr-20 hover:pause-marquee">
+      {/* Contenedor Marquee */}
+      <div className="flex overflow-hidden">
+        <div className="flex animate-marquee items-center gap-12 pl-48 hover:pause-marquee">
           {marqueeItems.map((item, index) => (
             <div
               key={`${item.id}-${index}`}
-              className="group flex items-center gap-5 flex-shrink-0"
+              className="flex items-center gap-3 flex-shrink-0 opacity-80 hover:opacity-100 transition-opacity select-none"
             >
-              {/* Esfera */}
-              <div className="relative flex-shrink-0">
-                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-[#ff0055] group-hover:shadow-[0_0_20px_rgba(255,0,85,0.3)] transition-all duration-500">
-                  <img
-                    src={item.img}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    draggable="false"
-                  />
+              {/* Avatar */}
+              <div className="relative">
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20">
+                  <img src={item.user.avatar} alt={item.user.name} className="w-full h-full object-cover" />
                 </div>
-                <div className="absolute -top-1 -right-1 bg-[#ff0055] text-[7px] font-black px-1.5 py-0.5 rounded-full text-white">
-                  {item.tag}
-                </div>
+                <div className="absolute -bottom-1 -right-1 bg-green-500 w-2.5 h-2.5 rounded-full border-2 border-[#080808]"></div>
               </div>
 
-              {/* Info */}
-              <div className="flex flex-col select-none">
-                <h3 className="text-sm font-black uppercase italic tracking-tighter text-white group-hover:text-[#ff0055] transition-colors leading-tight">
-                  {item.title}
-                </h3>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
-                  {item.artist}
-                </p>
+              {/* Text */}
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-gray-300">{item.user.name}</span>
+                  <span className="text-[9px] text-gray-500 uppercase font-medium">downloaded</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Download size={10} className="text-[#ff0055]" />
+                  <span className="text-[11px] font-bold text-white max-w-[150px] truncate">{item.track.title || item.track.name}</span>
+                </div>
               </div>
             </div>
           ))}
@@ -70,18 +101,10 @@ export function Trends() {
           100% { transform: translateX(-50%); }
         }
         .animate-marquee {
-          animation: marquee 50s linear infinite;
+          animation: marquee 60s linear infinite;
         }
         .animate-marquee:hover {
           animation-play-state: paused;
-        }
-        /* Ocultar barra de scroll para Macbook */
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
         }
       `}</style>
     </section>
