@@ -2,6 +2,7 @@ import { Flame, User, LogOut, ChevronDown, Settings, History, LifeBuoy, Search, 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../../supabase';
+import { useAuth } from '../../context/AuthContext';
 import { Link } from 'react-router-dom';
 
 export function Navigation({ user, currentView, onSearch }: {
@@ -13,12 +14,15 @@ export function Navigation({ user, currentView, onSearch }: {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const { signOut } = useAuth(); // Usar el hook para acceder al método del contexto
+
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
-      window.location.href = '/';
+      await signOut();
+      // No necesitamos window.location.href = '/' porque al cambiar el usuario a null,
+      // el App.tsx detectará el cambio y renderizará la vista de Login automáticamente.
     } catch (error) {
-      console.error(error);
+      console.error("Logout Error:", error);
     }
   };
 
