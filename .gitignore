@@ -121,3 +121,4 @@ dist
 # Local Scripts
 scripts/scan_*.js
 rutas_reales_*.json
+import_massive.js
