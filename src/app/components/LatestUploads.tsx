@@ -98,7 +98,15 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, onPl
                         </div>
                       </div>
                       <div className="hidden md:block col-span-1">
-                        <span className="px-3 py-1 bg-white/5 border rounded-md text-[9px] font-black uppercase tracking-widest truncate block text-center" style={{ color: trackColor, borderColor: `${trackColor}33` }}>{track.pool_origin || 'Unknown Pool'}</span>
+                        {(() => {
+                          const filename = track.filename || track.file_path || '';
+                          const ext = filename.split('.').pop()?.toUpperCase() || 'MP3';
+                          const formatColors: Record<string, string> = { 'MP3': '#ff0055', 'WAV': '#00d4ff', 'FLAC': '#ffcc00', 'AIFF': '#9d00ff' };
+                          const formatColor = formatColors[ext] || '#ffffff';
+                          return (
+                            <span className="px-3 py-1 bg-white/5 border rounded-md text-[9px] font-black uppercase tracking-widest truncate block text-center" style={{ color: formatColor, borderColor: `${formatColor}33` }}>{ext}</span>
+                          );
+                        })()}
                       </div>
 
                       <div className="md:col-span-1 flex justify-end items-center gap-3">
