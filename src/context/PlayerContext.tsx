@@ -21,7 +21,6 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     // Auth state
-    const [user, setUser] = useState<any>(null);
     const [token, setToken] = useState<string | undefined>(undefined);
 
     // Player state - CRITICAL: These were missing!
@@ -36,17 +35,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             supabase.auth.getSession().then(({ data: { session } }) => {
                 if (session) {
                     setToken(session.access_token);
-                    setUser(session.user);
                 }
             });
 
             supabase.auth.onAuthStateChange((_event, session) => {
                 if (session) {
                     setToken(session.access_token);
-                    setUser(session.user);
                 } else {
                     setToken(undefined);
-                    setUser(null);
                 }
             });
         });

@@ -27,10 +27,30 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// --- SECURITY HEADERS (Helmet) ---
+// --- SECURITY HEADERS (Helmet) - PRODUCTION HARDENED ---
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    contentSecurityPolicy: false
+    crossOriginOpenerPolicy: { policy: "same-origin" },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"], // Vite needs inline scripts
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            mediaSrc: ["'self'", "blob:", "https:"],
+            connectSrc: ["'self'", process.env.VITE_SUPABASE_URL, "https://*.supabase.co"].filter(Boolean),
+            frameSrc: ["'none'"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: []
+        }
+    },
+    hsts: {
+        maxAge: 31536000, // 1 year
+        includeSubDomains: true,
+        preload: true
+    }
 }));
 
 // --- CORS CONFIGURATION ---
@@ -51,12 +71,32 @@ app.use(cors({
     credentials: true
 }));
 
-// --- RATE LIMITING ---
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
-const streamLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 30 });
+// --- RATE LIMITING (PRODUCTION HARDENED) ---
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 200,
+    message: { error: 'Too many requests. Please wait 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const streamLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 30,
+    message: { error: 'Streaming rate limit exceeded. Wait 1 minute.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const downloadLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 100, // Max 100 downloads per hour
+    message: { error: 'Download limit reached. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 app.use('/api/search', apiLimiter);
-// app.use('/api/stream', streamLimiter); // Moved below auth
 
 app.use(express.static('public'));
 
@@ -141,7 +181,14 @@ app.get('/api/search', async (req, res) => {
 });
 
 // --- API 2: SECURE STREAMING (PROTECTED) ---
-app.get('/api/stream', requireAuth, streamLimiter, async (req, res) => {
+// Apply different rate limits based on action (stream vs download)
+app.get('/api/stream', requireAuth, async (req, res, next) => {
+    // Apply downloadLimiter only for downloads
+    if (req.query.download === 'true') {
+        return downloadLimiter(req, res, next);
+    }
+    return streamLimiter(req, res, next);
+}, async (req, res) => {
     const trackPath = req.query.path;
 
     if (!trackPath || !isPathSafe(trackPath)) {
@@ -176,6 +223,13 @@ app.get('/api/stream', requireAuth, streamLimiter, async (req, res) => {
             const filename = path.basename(trackPath);
             const safeFilename = filename.replace(/[^\w\s.-]/g, '_');
             res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+
+            // Log download to Supabase (async, non-blocking)
+            supabase.from('downloads').insert({
+                user_id: req.user?.id,
+                track_path: trackPath,
+                downloaded_at: new Date().toISOString()
+            }).then(() => { }).catch(() => { }); // Silent logging
         }
 
         response.data.pipe(res);

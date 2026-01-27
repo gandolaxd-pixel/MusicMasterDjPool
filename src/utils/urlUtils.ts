@@ -1,4 +1,4 @@
-import { API_URL, STORAGE_URL } from '../config';
+import { API_URL } from '../config';
 import { Track } from '../types';
 
 /**

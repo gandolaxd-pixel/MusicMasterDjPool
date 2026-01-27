@@ -29,19 +29,20 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
 
         try {
             const { supabase } = await import('../supabase');
+            // Use 'tracks' table for consistency (migrated data)
+            const folderPath = featuredPack.original_folder || featuredPack.folder;
             const { data } = await supabase
-                .from('dj_tracks')
+                .from('tracks')
                 .select('*')
-                .eq('original_folder', featuredPack.original_folder)
-                .eq('format', 'file') // Get songs, not sub-packs
+                .eq('folder', folderPath)
                 .limit(50); // Get tracks for the queue
 
             if (data && data.length > 0) {
                 // Map to player track format
                 const queue = data.map(song => ({
                     ...song,
-                    title: song.name || song.title,
-                    file_path: song.server_path || song.file_path,
+                    title: song.title || song.name,
+                    file_path: song.file_path || song.server_path,
                 }));
                 playQueue(queue);
             } else {
