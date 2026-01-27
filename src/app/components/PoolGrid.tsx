@@ -295,9 +295,12 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
             {/* Header */}
             <div className="flex items-center justify-between gap-4 px-4">
                 <div className="flex items-center gap-4">
-                    <button onClick={handleBack} className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl">
-                        <ArrowLeft size={20} className="group-hover:scale-110 text-white" />
-                    </button>
+                    {/* Hide back button at root level when using initialPool */}
+                    {!(initialPool && path.length === 1) && (
+                        <button onClick={handleBack} className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl">
+                            <ArrowLeft size={20} className="group-hover:scale-110 text-white" />
+                        </button>
+                    )}
                     <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
                         <span className="text-[#ff0055]">{path[path.length - 1]}</span>
                         {currentLevel === 'tracks' ? ' Tracks' : ' Contents'}
