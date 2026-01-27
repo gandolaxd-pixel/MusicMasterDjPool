@@ -97,286 +97,299 @@ const PoolGrid: React.FC = () => {
                     searchPrefix = `/${root}/${subPath ? subPath + '/' : ''}`;
                 }
 
-                // Pagination loop to bypass Supabase 1000-row limit
-                const BATCH_SIZE = 1000;
-                let allData: any[] = [];
+                // Optimized "Skip Scan" Strategy for large folders
+                // Instead of fetching 34k rows, we fetch 1 row, identify the folder, and skip to the next one.
+                const folderSet = new Set<string>();
+                const filesAtLevel: any[] = [];
                 let hasMore = true;
-                let from = 0;
+                let currentSkipMarker = searchPrefix;
 
-                while (hasMore) {
+                // Add a iteration limit to prevent infinite loops in case of weird data
+                let safetyLimit = 0;
+                const MAX_ITEMS = 500; // Expected max distinct folders/files in a single view
+
+                while (hasMore && safetyLimit < MAX_ITEMS) {
+                    safetyLimit++;
+
                     const { data, error } = await supabase
                         .from('dj_tracks')
-                        .select('server_path') // Select ONLY server_path to be lightweight
+                        .select('server_path, name') // We can fetch name now, it's cheap (1 row)
                         .eq('pool_id', 'BEATPORT')
                         .ilike('server_path', `${searchPrefix}%`)
-                        .range(from, from + BATCH_SIZE - 1);
+                        .gt('server_path', currentSkipMarker)
+                        .order('server_path', { ascending: true })
+                        .limit(1);
 
                     if (error || !data || data.length === 0) {
                         hasMore = false;
                     } else {
-                        allData = [...allData, ...data];
-                        from += BATCH_SIZE;
-                        // Safety break to prevent infinite loops (max 50k items for folder structure)
-                        if (data.length < BATCH_SIZE || allData.length > 50000) {
+                        const item = data[0];
+                        const serverPath = item.server_path;
+
+                        if (!serverPath) {
                             hasMore = false;
+                            continue;
                         }
-                    }
-                }
 
-                if (allData.length > 0) {
-                    // Extract unique folder names at the current level
-                    const folderSet = new Set<string>();
-                    const filesAtLevel: any[] = [];
+                        const pathParts = serverPath.split('/').filter(Boolean);
+                        const prefixDepth = searchPrefix.split('/').filter(Boolean).length;
 
-                    const prefixDepth = searchPrefix.split('/').filter(Boolean).length;
-
-                    allData.forEach(item => {
-                        if (!item.server_path) return;
-
-                        const pathParts = item.server_path.split('/').filter(Boolean);
-
-                        // Check if there's a folder at the next level
+                        // Check depth
                         if (pathParts.length > prefixDepth) {
                             const nextPart = pathParts[prefixDepth];
-                            // Check if this is a folder (has more parts after) or a file
+
+                            // Is it a folder or a file?
                             if (pathParts.length > prefixDepth + 1) {
+                                // It's a folder (e.g. "01")
                                 folderSet.add(nextPart);
+                                // Skip EVERYTHING inside this folder
+                                currentSkipMarker = `${searchPrefix}${nextPart}/\uffff`;
                             } else {
-                                // It's a file at this level (we don't need full data yet)
+                                // It's a file at this level
                                 filesAtLevel.push(item);
+                                // Skip THIS file
+                                currentSkipMarker = serverPath;
                             }
-                        }
-                    });
-
-                    // Sort folders: put MONTHS first, then BEATPORT COLLECTION, then alphabetically
-                    const sortedFolders = Array.from(folderSet).sort((a, b) => {
-                        if (a === 'MONTHS') return -1;
-                        if (b === 'MONTHS') return 1;
-                        if (a.includes('COLLECTION')) return -1;
-                        if (b.includes('COLLECTION')) return 1;
-                        // Numeric sort for days (01, 02, 10...)
-                        const numA = parseInt(a);
-                        const numB = parseInt(b);
-                        if (!isNaN(numA) && !isNaN(numB)) {
-                            return numA - numB;
-                        }
-                        return a.localeCompare(b);
-                    });
-
-                    if (sortedFolders.length > 0) {
-                        setFolderItems(sortedFolders);
-                        setTrackList([]);
-                    } else if (filesAtLevel.length > 0) {
-                        // We're at a leaf folder with tracks
-                        setFolderItems([]);
-
-                        // Fetch full track data for this folder (now we need full rows)
-                        const folderPath = searchPrefix;
-                        const { data: tracks } = await supabase
-                            .from('dj_tracks')
-                            .select('*')
-                            .eq('pool_id', 'BEATPORT')
-                            .ilike('server_path', `${folderPath}%`)
-                            //.limit(500) // Limit tracks per folder to avoid heavy render
-                            .order('name');
-
-                        if (tracks) {
-                            // Filter only files in this exact folder
-                            const exactFiles = tracks.filter(t => {
-                                const parts = t.server_path.split('/').filter(Boolean);
-                                return parts.length === prefixDepth + 1; // File directly in this folder
-                            });
-
-                            const mapped = exactFiles.map((item: any) => ({
-                                ...item,
-                                pool_origin: item.pool_id,
-                                file_path: item.server_path,
-                                title: item.title || item.name,
-                            }));
-                            setTrackList(mapped);
-                            setCurrentLevel('tracks');
+                        } else {
+                            // Should not happen if logic is correct
+                            currentSkipMarker = serverPath + '/\uffff';
                         }
                     }
                 }
-                setLoading(false);
-            };
-            fetchFolderContents();
-        }
+
+                // We use these variables in the UI logic below
+                // const sortedFolders ...
+                // const filesAtLevel ... are already populated
+
+                // Sort folders: put MONTHS first, then BEATPORT COLLECTION, then alphabetically
+                const sortedFolders = Array.from(folderSet).sort((a, b) => {
+                    if (a === 'MONTHS') return -1;
+                    if (b === 'MONTHS') return 1;
+                    if (a.includes('COLLECTION')) return -1;
+                    if (b.includes('COLLECTION')) return 1;
+                    // Numeric sort for days (01, 02, 10...)
+                    const numA = parseInt(a);
+                    const numB = parseInt(b);
+                    if (!isNaN(numA) && !isNaN(numB)) {
+                        return numA - numB;
+                    }
+                    return a.localeCompare(b);
+                });
+
+                if (sortedFolders.length > 0) {
+                    setFolderItems(sortedFolders);
+                    setTrackList([]);
+                } else if (filesAtLevel.length > 0) {
+                    // We're at a leaf folder with tracks
+                    setFolderItems([]);
+
+                    // Fetch full track data for this folder (now we need full rows)
+                    const folderPath = searchPrefix;
+                    const { data: tracks } = await supabase
+                        .from('dj_tracks')
+                        .select('*')
+                        .eq('pool_id', 'BEATPORT')
+                        .ilike('server_path', `${folderPath}%`)
+                        //.limit(500) // Limit tracks per folder to avoid heavy render
+                        .order('name');
+
+                    if (tracks) {
+                        // Filter only files in this exact folder
+                        const exactFiles = tracks.filter(t => {
+                            const parts = t.server_path.split('/').filter(Boolean);
+                            return parts.length === prefixDepth + 1; // File directly in this folder
+                        });
+
+                        const mapped = exactFiles.map((item: any) => ({
+                            ...item,
+                            pool_origin: item.pool_id,
+                            file_path: item.server_path,
+                            title: item.title || item.name,
+                        }));
+                        setTrackList(mapped);
+                        setCurrentLevel('tracks');
+                    }
+                }
+            }
+            setLoading(false);
+        };
+        fetchFolderContents();
+    }
     }, [currentLevel, path]);
 
-    // --- NAVIGATION HANDLERS ---
+// --- NAVIGATION HANDLERS ---
 
-    const handleBrandClick = (brand: string) => {
-        setPath([brand]);
-        setCurrentLevel('navigation');
-    };
+const handleBrandClick = (brand: string) => {
+    setPath([brand]);
+    setCurrentLevel('navigation');
+};
 
-    const handleFolderClick = (folder: string) => {
-        setPath([...path, folder]);
-    };
+const handleFolderClick = (folder: string) => {
+    setPath([...path, folder]);
+};
 
-    const handleBack = () => {
-        if (path.length <= 1) {
-            setPath([]);
-            setCurrentLevel('brands');
-        } else {
-            const newPath = [...path];
-            newPath.pop();
-            setPath(newPath);
-            if (currentLevel === 'tracks') {
-                setCurrentLevel('navigation');
-            }
-        }
-    };
-
-    const goHome = () => {
+const handleBack = () => {
+    if (path.length <= 1) {
         setPath([]);
         setCurrentLevel('brands');
-        setFolderItems([]);
-        setTrackList([]);
-    };
-
-    // --- RENDERERS ---
-
-    if (currentLevel === 'brands') {
-        return (
-            <div className="pt-10">
-                <div className="flex justify-between items-end mb-8 px-4">
-                    <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">
-                        Select <span className="text-[#ff0055]">Pool</span>
-                    </h2>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                    {brandList.map((name) => {
-                        if (name === 'Beatport New Releases') return null;
-
-                        const imageName = specialNames[name] || `${name.toLowerCase().replace(/\s/g, '')}.png`;
-                        const imagePath = `/pools/${imageName}`;
-                        const isFullCover = name === "Bangerz Army";
-
-                        return (
-                            <button
-                                key={name}
-                                onClick={() => handleBrandClick(name)}
-                                className="group aspect-square bg-[#0a0a0a] border border-white/10 rounded-3xl flex items-center justify-center overflow-hidden transition-all duration-500 hover:border-[#ff0055] hover:shadow-[0_0_35px_rgba(255,0,85,0.35)]"
-                            >
-                                <img
-                                    src={imagePath}
-                                    alt={name}
-                                    className={`w-full h-full transition-all duration-500 opacity-70 group-hover:opacity-100 group-hover:scale-110 ${isFullCover ? 'object-cover' : 'object-contain p-5'}`}
-                                    onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                        const fallback = target.nextElementSibling as HTMLElement;
-                                        if (fallback) fallback.style.display = 'flex';
-                                    }}
-                                />
-                                <div style={{ display: 'none' }} className="flex-col items-center justify-center p-4 text-center">
-                                    <Disc size={30} className="mx-auto mb-2 text-[#ff0055] opacity-40 group-hover:opacity-100" />
-                                    <span className="text-[10px] font-bold uppercase block leading-tight text-gray-400 group-hover:text-white">{name}</span>
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-        );
+    } else {
+        const newPath = [...path];
+        newPath.pop();
+        setPath(newPath);
+        if (currentLevel === 'tracks') {
+            setCurrentLevel('navigation');
+        }
     }
+};
 
+const goHome = () => {
+    setPath([]);
+    setCurrentLevel('brands');
+    setFolderItems([]);
+    setTrackList([]);
+};
+
+// --- RENDERERS ---
+
+if (currentLevel === 'brands') {
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 pt-10 pb-20">
-            {/* Breadcrumb Navigation */}
-            <div className="flex items-center gap-2 px-4 overflow-x-auto py-2 border-b border-white/5 pb-6">
-                <button onClick={goHome} className="p-2 hover:bg-white/5 rounded-lg text-gray-500 transition-colors">
-                    <Home size={18} />
-                </button>
-                {path.map((p, i) => (
-                    <div key={i} className="flex items-center gap-2 flex-shrink-0">
-                        <ChevronRight size={14} className="text-gray-800" />
+        <div className="pt-10">
+            <div className="flex justify-between items-end mb-8 px-4">
+                <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">
+                    Select <span className="text-[#ff0055]">Pool</span>
+                </h2>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                {brandList.map((name) => {
+                    if (name === 'Beatport New Releases') return null;
+
+                    const imageName = specialNames[name] || `${name.toLowerCase().replace(/\s/g, '')}.png`;
+                    const imagePath = `/pools/${imageName}`;
+                    const isFullCover = name === "Bangerz Army";
+
+                    return (
                         <button
-                            onClick={() => {
-                                const newPath = path.slice(0, i + 1);
-                                setPath(newPath);
-                                setCurrentLevel('navigation');
-                            }}
-                            className={`text-[10px] font-black uppercase tracking-[0.2em] ${i === path.length - 1 ? 'text-[#ff0055]' : 'text-gray-600 hover:text-gray-400'}`}
+                            key={name}
+                            onClick={() => handleBrandClick(name)}
+                            className="group aspect-square bg-[#0a0a0a] border border-white/10 rounded-3xl flex items-center justify-center overflow-hidden transition-all duration-500 hover:border-[#ff0055] hover:shadow-[0_0_35px_rgba(255,0,85,0.35)]"
                         >
-                            {p}
-                        </button>
-                    </div>
-                ))}
-            </div>
-
-            {/* Header */}
-            <div className="flex items-center justify-between gap-4 px-4">
-                <div className="flex items-center gap-4">
-                    <button onClick={handleBack} className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl">
-                        <ArrowLeft size={20} className="group-hover:scale-110 text-white" />
-                    </button>
-                    <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
-                        <span className="text-[#ff0055]">{path[path.length - 1]}</span>
-                        {currentLevel === 'tracks' ? ' Tracks' : ' Contents'}
-                    </h2>
-                </div>
-            </div>
-
-            {/* FOLDER NAVIGATION VIEW */}
-            {currentLevel === 'navigation' && (
-                <div className="flex flex-col gap-2 px-4">
-                    {loading ? (
-                        <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading...</div>
-                    ) : folderItems.length > 0 ? (
-                        folderItems.map((folder) => (
-                            <div
-                                key={folder}
-                                onClick={() => handleFolderClick(folder)}
-                                className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all"
-                            >
-                                <div className="flex items-center gap-5">
-                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5 transition-colors text-gray-600 group-hover:text-[#ff0055]">
-                                        <Folder size={22} />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{folder}</h3>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">folder</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors"><Folder size={18} /></div>
+                            <img
+                                src={imagePath}
+                                alt={name}
+                                className={`w-full h-full transition-all duration-500 opacity-70 group-hover:opacity-100 group-hover:scale-110 ${isFullCover ? 'object-cover' : 'object-contain p-5'}`}
+                                onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const fallback = target.nextElementSibling as HTMLElement;
+                                    if (fallback) fallback.style.display = 'flex';
+                                }}
+                            />
+                            <div style={{ display: 'none' }} className="flex-col items-center justify-center p-4 text-center">
+                                <Disc size={30} className="mx-auto mb-2 text-[#ff0055] opacity-40 group-hover:opacity-100" />
+                                <span className="text-[10px] font-bold uppercase block leading-tight text-gray-400 group-hover:text-white">{name}</span>
                             </div>
-                        ))
-                    ) : (
-                        <p className="text-gray-500 py-10 text-center">No folders found at this level.</p>
-                    )}
-                </div>
-            )}
-
-            {/* TRACKS VIEW */}
-            {currentLevel === 'tracks' && (
-                <div className="px-4">
-                    {loading ? (
-                        <div className="text-white">Loading tracks...</div>
-                    ) : trackList.length > 0 ? (
-                        <LatestUploads
-                            tracks={trackList}
-                            selectedGenre={null}
-                            onGenreSelect={() => { }}
-                            user={user}
-                            onPlay={playTrack}
-                            currentTrack={currentTrack}
-                            isPlaying={isPlaying}
-                            onToggleCrate={toggleCrate}
-                            crate={crate}
-                        />
-                    ) : (
-                        <p className="text-gray-500 py-10 text-center">No tracks found in this folder.</p>
-                    )}
-                </div>
-            )}
+                        </button>
+                    );
+                })}
+            </div>
         </div>
     );
+}
+
+return (
+    <div className="space-y-8 animate-in fade-in duration-500 pt-10 pb-20">
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 px-4 overflow-x-auto py-2 border-b border-white/5 pb-6">
+            <button onClick={goHome} className="p-2 hover:bg-white/5 rounded-lg text-gray-500 transition-colors">
+                <Home size={18} />
+            </button>
+            {path.map((p, i) => (
+                <div key={i} className="flex items-center gap-2 flex-shrink-0">
+                    <ChevronRight size={14} className="text-gray-800" />
+                    <button
+                        onClick={() => {
+                            const newPath = path.slice(0, i + 1);
+                            setPath(newPath);
+                            setCurrentLevel('navigation');
+                        }}
+                        className={`text-[10px] font-black uppercase tracking-[0.2em] ${i === path.length - 1 ? 'text-[#ff0055]' : 'text-gray-600 hover:text-gray-400'}`}
+                    >
+                        {p}
+                    </button>
+                </div>
+            ))}
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 px-4">
+            <div className="flex items-center gap-4">
+                <button onClick={handleBack} className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl">
+                    <ArrowLeft size={20} className="group-hover:scale-110 text-white" />
+                </button>
+                <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
+                    <span className="text-[#ff0055]">{path[path.length - 1]}</span>
+                    {currentLevel === 'tracks' ? ' Tracks' : ' Contents'}
+                </h2>
+            </div>
+        </div>
+
+        {/* FOLDER NAVIGATION VIEW */}
+        {currentLevel === 'navigation' && (
+            <div className="flex flex-col gap-2 px-4">
+                {loading ? (
+                    <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading...</div>
+                ) : folderItems.length > 0 ? (
+                    folderItems.map((folder) => (
+                        <div
+                            key={folder}
+                            onClick={() => handleFolderClick(folder)}
+                            className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all"
+                        >
+                            <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5 transition-colors text-gray-600 group-hover:text-[#ff0055]">
+                                    <Folder size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{folder}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">folder</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors"><Folder size={18} /></div>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-gray-500 py-10 text-center">No folders found at this level.</p>
+                )}
+            </div>
+        )}
+
+        {/* TRACKS VIEW */}
+        {currentLevel === 'tracks' && (
+            <div className="px-4">
+                {loading ? (
+                    <div className="text-white">Loading tracks...</div>
+                ) : trackList.length > 0 ? (
+                    <LatestUploads
+                        tracks={trackList}
+                        selectedGenre={null}
+                        onGenreSelect={() => { }}
+                        user={user}
+                        onPlay={playTrack}
+                        currentTrack={currentTrack}
+                        isPlaying={isPlaying}
+                        onToggleCrate={toggleCrate}
+                        crate={crate}
+                    />
+                ) : (
+                    <p className="text-gray-500 py-10 text-center">No tracks found in this folder.</p>
+                )}
+            </div>
+        )}
+    </div>
+);
 };
 
 export default PoolGrid;
