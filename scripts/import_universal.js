@@ -1,15 +1,18 @@
+
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
 import { parse } from 'node-html-parser';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Configuración Supabase
-const SUPABASE_URL = 'https://mnfcbeasyebrgxhfitiv.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1uZmNiZWFzeWVicmd4aGZpdGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0MjYyNTYsImV4cCI6MjA4NDAwMjI1Nn0.a7bHJtuGUMSQkEJXKwN43v9s97t384NUrEMBD49trA8';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mnfcbeasyebrgxhfitiv.supabase.co';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
 
 // Configuración StorageBox
-const STORAGE_USER = 'u529624-sub1';
-const STORAGE_PASS = 'Gandola2026!';
-const STORAGE_HOST = 'u529624-sub1.your-storagebox.de';
+const STORAGE_USER = process.env.STORAGE_USER || 'u529624-sub1';
+const STORAGE_PASS = process.env.STORAGE_PASS || 'Gandola2026!';
+const STORAGE_HOST = process.env.STORAGE_HOST || 'u529624-sub1.your-storagebox.de';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -19,31 +22,87 @@ let totalInserted = 0;
 let batchQueue = [];
 const BATCH_SIZE = 100;
 
+// --- HIERARCHY LOGIC ---
+const MONTHS = {
+    'JANUARY': 1, 'FEBRUARY': 2, 'MARCH': 3, 'APRIL': 4, 'MAY': 5, 'JUNE': 6,
+    'JULY': 7, 'AUGUST': 8, 'SEPTEMBER': 9, 'OCTOBER': 10, 'NOVEMBER': 11, 'DECEMBER': 12
+};
+
+function detectMonth(pathParts, filename) {
+    const fullString = pathParts.join(' ').toUpperCase() + ' ' + filename.toUpperCase();
+
+    // 1. Explicit Folder in Path
+    for (const part of pathParts) {
+        if (MONTHS[part.toUpperCase()]) return part.toUpperCase();
+    }
+
+    // 2. String Match
+    for (const month of Object.keys(MONTHS)) {
+        if (fullString.includes(month)) return month;
+    }
+
+    // 3. Week Logic
+    const weekMatch = fullString.match(/WEEK\s?(\d+)/);
+    if (weekMatch) {
+        const week = parseInt(weekMatch[1]);
+        if (week >= 48) return 'DECEMBER';
+        if (week >= 44) return 'NOVEMBER';
+        if (week >= 40) return 'OCTOBER';
+        if (week >= 35) return 'SEPTEMBER';
+        if (week >= 31) return 'AUGUST';
+        if (week >= 26) return 'JULY';
+        if (week >= 22) return 'JUNE';
+        if (week >= 17) return 'MAY';
+        if (week >= 13) return 'APRIL';
+        if (week >= 9) return 'MARCH';
+        if (week >= 5) return 'FEBRUARY';
+        return 'JANUARY';
+    }
+
+    return 'COLLECTIONS';
+}
+
+function extractFolder(pathParts, month) {
+    if (pathParts[1] && pathParts[1].toUpperCase() === month) {
+        if (/^\d+$/.test(pathParts[2])) {
+            return pathParts[3] || pathParts[2];
+        }
+        return pathParts[2] || 'Uncategorized';
+    }
+    if (pathParts[1]) return pathParts[1];
+    return 'General';
+}
+
+function calculateOriginalFolder(fullPath) {
+    const parts = fullPath.split('/').filter(p => p !== '');
+    const filename = parts[parts.length - 1];
+    const month = detectMonth(parts, filename);
+    const folder = extractFolder(parts, month);
+    return `${month}/${folder}`;
+}
+
 /**
  * Inserta un lote de tracks en Supabase
  */
-async function flushBatch(poolName, folderName) {
+async function flushBatch(poolName) {
     if (batchQueue.length === 0) return;
 
     const tracksToInsert = batchQueue.map(track => {
         const nameWithoutExt = track.filename.replace(/\.(mp3|wav|flac|zip|rar|aiff|m4a)$/i, '');
         const publicUrl = `https://${STORAGE_HOST}${track.fullPath}`;
 
-        // Intentar adivinar fecha
+        // Intentar adivinar fecha (drop_month) para metadatos extra
         const dropMatch = track.fullPath.match(/202[0-9]\/[0-1][0-9]/);
         const dropMonth = dropMatch ? dropMatch[0].replace('/', '-') : new Date().toISOString().slice(0, 7);
 
         return {
             name: track.filename,
             title: nameWithoutExt,
-            // artists: 'Various Artists', // REMOVED: Column does not exist in DB
             server_path: track.fullPath,
             file_url: publicUrl,
-            original_folder: folderName,
+            original_folder: track.calculatedFolder, // Usar la carpeta calculada individualmente
             format: 'file',
             pool_id: poolName,
-            // pool_origin: poolName, // REMOVED: Not in DB
-            // genre: 'Electronic',   // REMOVED: Not in DB
             drop_month: dropMonth,
             drop_day: new Date().getDate(),
             created_at: new Date().toISOString()
@@ -67,7 +126,6 @@ async function flushBatch(poolName, folderName) {
  */
 async function scanFolderRecursive(folderPath, baseFolder, poolName) {
     const auth = Buffer.from(`${STORAGE_USER}:${STORAGE_PASS}`).toString('base64');
-    // Ensure no double slashes in URL
     const cleanPath = folderPath.replace(/([^:]\/)\/+/g, "$1");
     const url = `https://${STORAGE_HOST}${cleanPath}`;
 
@@ -91,33 +149,19 @@ async function scanFolderRecursive(folderPath, baseFolder, poolName) {
 
             if (decodedName.endsWith('/')) {
                 // Es Subcarpeta
-
-                // Evitar:
-                // 1. Carpetas de sistema (.profile, .trash)
-                // 2. Nombres vacíos 
-                // 3. Root path '/' (already handled by startswith check logic below usually)
                 if (!subfolderName || subfolderName.trim() === '' || subfolderName.startsWith('.')) continue;
 
-                // CORRECCIÓN TRAYECTORIA ROBUSTA:
                 let nextPath;
                 if (decodedName.startsWith('/')) {
-                    // El servidor devuelve ruta absoluta (ej: /BEATPORT2025/Folder)
-                    // Usamos esa ruta directamente.
-                    nextPath = decodedName.slice(0, -1); // Sin slash final para consistencia
+                    nextPath = decodedName.slice(0, -1);
                 } else {
-                    // El servidor devuelve relativa (Folder/)
-                    // Concatenamos
                     nextPath = `${folderPath}/${subfolderName}`;
                 }
 
-                // Evitar bucles: si nextPath es igual a folderPath o contiene // dobles raros, skip
                 if (nextPath === folderPath || nextPath.length <= folderPath.length && folderPath.startsWith(nextPath)) {
-                    // Caso raro de recursión hacia arriba
                     continue;
                 }
 
-                // Log Informativo (Path relativo para no ensuciar)
-                // Si nextPath empieza con baseFolder, mostrar solo lo que sigue
                 let displayPath = nextPath;
                 if (nextPath.startsWith(baseFolder)) {
                     displayPath = nextPath.slice(baseFolder.length);
@@ -130,7 +174,6 @@ async function scanFolderRecursive(folderPath, baseFolder, poolName) {
                 // Es Archivo
                 const hasExtension = audioExtensions.some(ext => decodedName.toLowerCase().endsWith(ext));
                 if (hasExtension) {
-                    // Construir fullPath correcto según si es absoluto o relativo
                     let fullPath;
                     if (decodedName.startsWith('/')) {
                         fullPath = decodedName;
@@ -138,29 +181,28 @@ async function scanFolderRecursive(folderPath, baseFolder, poolName) {
                         fullPath = `${folderPath}/${decodedName}`;
                     }
 
+                    // CALCULAR JERARQUÍA AQUÍ
+                    const calculatedFolder = calculateOriginalFolder(fullPath);
+
                     batchQueue.push({
-                        filename: decodedName.split('/').pop(), // Solo el nombre final
+                        filename: decodedName.split('/').pop(),
                         fullPath: fullPath,
-                        subfolder: 'root' // Simplification
+                        calculatedFolder: calculatedFolder
                     });
 
                     totalFound++;
 
                     if (batchQueue.length >= BATCH_SIZE) {
-                        await flushBatch(poolName, baseFolder);
+                        await flushBatch(poolName);
                     }
                 }
             }
         }
     } catch (error) {
-        // Ignorar errores menores para no detener el flujo masivo
-        // console.error(`\n⚠️ Error leyendo ${folderPath}: ${error.code || error.message}`);
+        // Ignorar errores menores
     }
 }
 
-/**
- * MAIN
- */
 async function main() {
     const args = process.argv.slice(2);
     const folder = args[0];
@@ -173,7 +215,7 @@ async function main() {
 
     const targetFolder = folder.startsWith('/') ? folder : '/' + folder;
 
-    console.log(`🚀 IMPORTADOR OPTIMIZADO V3 (FIXED PATHS & SCHEMA)`);
+    console.log(`🚀 IMPORTADOR OPTIMIZADO V4 (HIERARCHY SUPPORT)`);
     console.log(`📂 Objetivo: ${targetFolder}`);
     console.log(`📡 Pool: ${pool}`);
     console.log("-----------------------------------------");
@@ -181,8 +223,7 @@ async function main() {
 
     await scanFolderRecursive(targetFolder, targetFolder, pool);
 
-    // Insertar remanentes
-    await flushBatch(pool, targetFolder);
+    await flushBatch(pool);
 
     console.log(`\n\n🏁 FINALIZADO.`);
     console.log(`Archivos encontrados: ${totalFound}`);

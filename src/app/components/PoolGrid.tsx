@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
-import { Disc, ArrowLeft, Folder, LayoutGrid, List as ListIcon } from 'lucide-react';
+import { Disc, ArrowLeft, Folder } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { useCrate } from '../../context/CrateContext';
 import { useAuth } from '../../context/AuthContext';
@@ -13,7 +13,7 @@ interface SpecialNames {
 const PoolGrid: React.FC = () => {
     // Navigation State
     const [view, setView] = useState<'brands' | 'years' | 'months' | 'folders' | 'tracks'>('brands');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
     const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
     const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null); // "Beatport 2025"
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -223,24 +223,7 @@ const PoolGrid: React.FC = () => {
 
     // --- RENDERERS ---
 
-    const ViewToggle = () => (
-        <div className="flex items-center gap-2 bg-[#111] p-1 rounded-lg border border-white/10">
-            <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-[#ff0055] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
-                title="Grid View"
-            >
-                <LayoutGrid size={16} />
-            </button>
-            <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-[#ff0055] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
-                title="List View"
-            >
-                <ListIcon size={16} />
-            </button>
-        </div>
-    );
+
 
     if (view === 'brands') {
         return (
@@ -249,13 +232,9 @@ const PoolGrid: React.FC = () => {
                     <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">
                         Select <span className="text-[#ff0055]">Pool</span>
                     </h2>
-                    <ViewToggle />
                 </div>
 
-                <div className={viewMode === 'grid'
-                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6"
-                    : "flex flex-col gap-3 px-4"
-                }>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
                     {brandList.map((name) => {
                         // Skip legacy "Beatport New Releases"
                         if (name === 'Beatport New Releases') return null;
@@ -263,30 +242,6 @@ const PoolGrid: React.FC = () => {
                         const imageName = specialNames[name] || `${name.toLowerCase().replace(/\s/g, '')}.png`;
                         const imagePath = `/pools/${imageName}`;
                         const isFullCover = name === "Bangerz Army";
-
-                        if (viewMode === 'list') {
-                            return (
-                                <button
-                                    key={name}
-                                    onClick={() => handleBrandClick(name)}
-                                    className="p-4 bg-[#111] border border-white/10 rounded-xl flex items-center gap-4 hover:bg-white/5 hover:border-[#ff0055] transition-all text-left group"
-                                >
-                                    <div className="w-12 h-12 bg-black rounded-lg p-2 flex items-center justify-center border border-white/5">
-                                        <img
-                                            src={imagePath}
-                                            alt={name}
-                                            className="w-full h-full object-contain opacity-70 group-hover:opacity-100 transition-opacity"
-                                            onError={(e) => {
-                                                (e.target as HTMLElement).style.display = 'none';
-                                                ((e.target as HTMLElement).nextElementSibling as HTMLElement).style.display = 'block';
-                                            }}
-                                        />
-                                        <Disc size={20} className="hidden text-[#ff0055]" />
-                                    </div>
-                                    <span className="text-lg font-bold text-gray-300 group-hover:text-white transition-colors">{name}</span>
-                                </button>
-                            );
-                        }
 
                         return (
                             <button
@@ -332,27 +287,35 @@ const PoolGrid: React.FC = () => {
                         {view === 'tracks' && <><span className="text-[#ff0055]">{selectedFolder}</span> Tracks</>}
                     </h2>
                 </div>
-                {view !== 'tracks' && <ViewToggle />}
+
             </div>
 
             {/* YEARS VIEW */}
             {view === 'years' && (
-                <div className={viewMode === 'grid'
-                    ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4"
-                    : "flex flex-col gap-3 px-4"
-                }>
-                    {loading ? <div className="text-white">Loading identifiers...</div> : yearList.map((yearPool) => (
-                        <button
+                <div className="flex flex-col gap-2 px-4">
+                    {loading ? (
+                        <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading...</div>
+                    ) : yearList.map((yearPool) => (
+                        <div
                             key={yearPool}
                             onClick={() => { setSelectedPoolId(yearPool); setView('months'); }}
-                            className={viewMode === 'grid'
-                                ? "h-32 bg-[#111] border border-white/10 rounded-2xl flex flex-col items-center justify-center hover:bg-white/5 hover:border-[#ff0055] transition-all group"
-                                : "p-4 bg-[#111] border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/5 hover:border-[#ff0055] transition-all group"
-                            }
+                            className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all"
                         >
-                            <span className={`${viewMode === 'grid' ? 'text-2xl' : 'text-lg'} font-black text-white group-hover:text-[#ff0055] uppercase`}>{yearPool}</span>
-                            <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">{yearPool.includes('20') ? 'Annual Collection' : 'Pool Archive'}</span>
-                        </button>
+                            <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5 transition-colors text-gray-600 group-hover:text-[#ff0055]">
+                                    <Folder size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{yearPool}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">year</span>
+                                        <span className="w-1 h-1 bg-gray-800 rounded-full" />
+                                        <span className="text-[9px] font-bold text-gray-600 uppercase">{yearPool.includes('20') ? 'Annual Collection' : 'Pool Archive'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors"><Folder size={18} /></div>
+                        </div>
                     ))}
                     {!loading && yearList.length === 0 && <p className="text-gray-500">No collections found.</p>}
                 </div>
@@ -360,22 +323,30 @@ const PoolGrid: React.FC = () => {
 
             {/* MONTHS VIEW */}
             {view === 'months' && (
-                <div className={viewMode === 'grid'
-                    ? "grid grid-cols-2 md:grid-cols-4 gap-4 px-4"
-                    : "flex flex-col gap-3 px-4"
-                }>
-                    {loading ? <div className="text-white">Loading months...</div> : monthList.map((month) => (
-                        <button
+                <div className="flex flex-col gap-2 px-4">
+                    {loading ? (
+                        <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading months...</div>
+                    ) : monthList.map((month) => (
+                        <div
                             key={month}
                             onClick={() => { setSelectedMonth(month); setView('folders'); }}
-                            className={viewMode === 'grid'
-                                ? "p-8 bg-[#111] border border-white/10 rounded-2xl text-center hover:bg-white/5 hover:border-[#ff0055] transition-all group"
-                                : "p-4 bg-[#111] border border-white/10 rounded-xl flex items-center gap-4 hover:bg-white/5 hover:border-[#ff0055] transition-all text-left group"
-                            }
+                            className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all"
                         >
-                            {viewMode === 'list' && <span className="p-2 bg-white/5 rounded-md text-gray-500"><Folder size={16} /></span>}
-                            <span className={`${viewMode === 'grid' ? 'text-xl' : 'text-lg'} font-bold text-gray-300 group-hover:text-white ${viewMode === 'grid' ? 'group-hover:scale-110 block transition-transform' : ''}`}>{month}</span>
-                        </button>
+                            <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5 transition-colors text-gray-600 group-hover:text-[#ff0055]">
+                                    <Folder size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{month}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">month</span>
+                                        <span className="w-1 h-1 bg-gray-800 rounded-full" />
+                                        <span className="text-[9px] font-bold text-gray-600 uppercase">Library Folder</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors"><Folder size={18} /></div>
+                        </div>
                     ))}
                     {!loading && monthList.length === 0 && <p className="text-gray-500">No months found (Running reorganization...).</p>}
                 </div>
@@ -383,28 +354,31 @@ const PoolGrid: React.FC = () => {
 
             {/* FOLDERS VIEW */}
             {view === 'folders' && (
-                <div className={viewMode === 'grid'
-                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4"
-                    : "flex flex-col gap-3 px-4"
-                }>
-                    {loading ? <div className="text-white">Loading folders...</div> : folderList.map((folder) => {
-                        const displayName = folder;
-                        return (
-                            <button
-                                key={folder}
-                                onClick={() => { setSelectedFolder(folder); setView('tracks'); }}
-                                className={`p-6 bg-[#111] border border-white/10 rounded-xl flex items-center gap-4 hover:bg-white/5 hover:border-[#ff0055] transition-all text-left group ${viewMode === 'list' ? 'py-4' : ''}`}
-                            >
-                                <div className="p-3 bg-white/5 rounded-lg text-gray-400 group-hover:text-[#ff0055] group-hover:bg-[#ff0055]/10">
-                                    <Folder size={24} />
+                <div className="flex flex-col gap-2 px-4">
+                    {loading ? (
+                        <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading folders...</div>
+                    ) : folderList.map((folder) => (
+                        <div
+                            key={folder}
+                            onClick={() => { setSelectedFolder(folder); setView('tracks'); }}
+                            className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all"
+                        >
+                            <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5 transition-colors text-[#ff0055] group-hover:bg-[#ff0055]/10">
+                                    <Disc size={22} className="group-hover:rotate-90 transition-transform duration-500" />
                                 </div>
-                                <div className="min-w-0">
-                                    <h3 className="font-bold text-white truncate group-hover:text-[#ff0055] transition-colors">{displayName}</h3>
-                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">{selectedMonth}</p>
+                                <div>
+                                    <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{folder}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">pack</span>
+                                        <span className="w-1 h-1 bg-gray-800 rounded-full" />
+                                        <span className="text-[9px] font-bold text-gray-600 uppercase">{selectedMonth}</span>
+                                    </div>
                                 </div>
-                            </button>
-                        );
-                    })}
+                            </div>
+                            <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors"><Folder size={18} /></div>
+                        </div>
+                    ))}
                 </div>
             )}
 
