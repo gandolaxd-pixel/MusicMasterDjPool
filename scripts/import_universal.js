@@ -74,6 +74,13 @@ function extractFolder(pathParts, month) {
 }
 
 function calculateOriginalFolder(fullPath) {
+    // SPECIAL HANDLING FOR DJPACKS to preserve /DJPACKS/YEAR structure
+    if (fullPath.includes('/DJPACKS') || fullPath.includes('DJPACKS/')) {
+        const parts = fullPath.split('/').filter(p => p !== '');
+        parts.pop(); // Remove filename
+        return parts.join('/');
+    }
+
     const parts = fullPath.split('/').filter(p => p !== '');
     const filename = parts[parts.length - 1];
     const month = detectMonth(parts, filename);
@@ -101,7 +108,7 @@ async function flushBatch(poolName) {
             server_path: track.fullPath,
             file_url: publicUrl,
             original_folder: track.calculatedFolder, // Usar la carpeta calculada individualmente
-            format: 'file',
+            format: poolName === 'DJPACKS' ? 'pack' : 'file',
             pool_id: poolName,
             drop_month: dropMonth,
             drop_day: new Date().getDate(),
@@ -165,6 +172,15 @@ async function scanFolderRecursive(folderPath, baseFolder, poolName) {
                 let displayPath = nextPath;
                 if (nextPath.startsWith(baseFolder)) {
                     displayPath = nextPath.slice(baseFolder.length);
+                }
+
+                // SECURITY EXCLUSION
+                const upperPath = nextPath.toUpperCase();
+                if (upperPath.includes('.TRASH') ||
+                    upperPath.includes('$RECYCLE.BIN') ||
+                    upperPath.includes('0DAYS') ||
+                    upperPath.includes('COLLECTIONS')) {
+                    continue;
                 }
 
                 process.stdout.write(`\r📂 ${displayPath.substring(0, 60)}... `);

@@ -90,9 +90,10 @@ const PoolGrid: React.FC = () => {
                     // Start at root '/' to allow selecting BEATPORT2025, BEATPORT2026, etc.
                     const subPath = path.slice(1).join('/');
                     searchPrefix = `/${subPath ? subPath + '/' : ''}`;
-                }
-
-                // Define prefixDepth for later use
+                } else {
+                    // Default behavior for others
+                    searchPrefix = `/${path.join('/')}`;
+                }      // Define prefixDepth for later use
                 const prefixDepth = searchPrefix.split('/').filter(Boolean).length;
 
                 // 🚀 SUPER FAST INDEXED NAVIGATION (10TB Scale)
@@ -115,18 +116,20 @@ const PoolGrid: React.FC = () => {
                 }
 
                 // 2. Sort folders
-                const sortedFolders = Array.from(folderSet).sort((a, b) => {
-                    if (a === 'MONTHS') return -1;
-                    if (b === 'MONTHS') return 1;
-                    if (a.includes('COLLECTION')) return -1;
-                    if (b.includes('COLLECTION')) return 1;
-                    const numA = parseInt(a);
-                    const numB = parseInt(b);
-                    if (!isNaN(numA) && !isNaN(numB)) {
-                        return numA - numB;
-                    }
-                    return a.localeCompare(b);
-                });
+                const sortedFolders = Array.from(folderSet)
+                    .filter(name => name !== 'DJPACKS') // HIDE DJPACKS from general view
+                    .sort((a, b) => {
+                        if (a === 'MONTHS') return -1;
+                        if (b === 'MONTHS') return 1;
+                        if (a.includes('COLLECTION')) return -1;
+                        if (b.includes('COLLECTION')) return 1;
+                        const numA = parseInt(a);
+                        const numB = parseInt(b);
+                        if (!isNaN(numA) && !isNaN(numB)) {
+                            return numA - numB;
+                        }
+                        return a.localeCompare(b);
+                    });
 
                 if (sortedFolders.length > 0) {
                     setFolderItems(sortedFolders);

@@ -4,9 +4,6 @@ import { usePlayer } from '../context/PlayerContext';
 
 interface PacksPageProps {
     user: any;
-    isPlaying?: boolean;
-    currentTrack?: any;
-    onPlay?: (track: any) => void;
 }
 
 export const PacksPage: React.FC<PacksPageProps> = ({
