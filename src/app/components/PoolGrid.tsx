@@ -10,10 +10,14 @@ interface SpecialNames {
     [key: string]: string;
 }
 
-const PoolGrid: React.FC = () => {
+interface PoolGridProps {
+    initialPool?: string;
+}
+
+const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
     // Navigation State - supports unlimited depth
-    const [path, setPath] = useState<string[]>([]); // ["Beatport", "BEATPORT2025", "MONTHS", "DECEMBER", ...]
-    const [currentLevel, setCurrentLevel] = useState<'brands' | 'navigation' | 'tracks'>('brands');
+    const [path, setPath] = useState<string[]>(initialPool ? [initialPool] : []);
+    const [currentLevel, setCurrentLevel] = useState<'brands' | 'navigation' | 'tracks'>(initialPool ? 'navigation' : 'brands');
 
     // Data State
     const [brandList, setBrandList] = useState<string[]>([]);
@@ -69,14 +73,14 @@ const PoolGrid: React.FC = () => {
         "DMP": "dmp.png"
     };
 
-    // Load brands on mount
+    // Load brands on mount (skip if initialPool is set)
     useEffect(() => {
-        if (currentLevel === 'brands') {
+        if (!initialPool && currentLevel === 'brands') {
             const allPools = Object.keys(specialNames).sort();
             const unique = Array.from(new Set(allPools));
             setBrandList(unique);
         }
-    }, [currentLevel]);
+    }, [currentLevel, initialPool]);
 
     // Navigate folder structure based on server_path
     useEffect(() => {
@@ -90,6 +94,9 @@ const PoolGrid: React.FC = () => {
                     // Start at root '/' to allow selecting BEATPORT2025, BEATPORT2026, etc.
                     const subPath = path.slice(1).join('/');
                     searchPrefix = `/${subPath ? subPath + '/' : ''}`;
+                } else if (brand === 'DJPACKS') {
+                    // DJPACKS: use /DJPACKS/... path structure
+                    searchPrefix = `/${path.join('/')}`;
                 } else {
                     // Default behavior for others
                     searchPrefix = `/${path.join('/')}`;

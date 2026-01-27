@@ -1,24 +1,14 @@
 import React from 'react';
-import DJPacks from '../app/components/DjPacks';
-import { usePlayer } from '../context/PlayerContext';
+import PoolGrid from '../app/components/PoolGrid';
 
 interface PacksPageProps {
     user: any;
 }
 
-export const PacksPage: React.FC<PacksPageProps> = ({
-    user
-}) => {
-    const { playTrack, currentTrack, isPlaying } = usePlayer();
-
+export const PacksPage: React.FC<PacksPageProps> = () => {
     return (
         <div className="animate-in fade-in duration-700">
-            <DJPacks
-                user={user}
-                isPlaying={isPlaying}
-                currentTrack={currentTrack}
-                onPlay={playTrack}
-            />
+            <PoolGrid initialPool="DJPACKS" />
         </div>
     );
 };
