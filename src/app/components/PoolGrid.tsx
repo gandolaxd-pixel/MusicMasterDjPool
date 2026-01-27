@@ -97,21 +97,40 @@ const PoolGrid: React.FC = () => {
                     searchPrefix = `/${root}/${subPath ? subPath + '/' : ''}`;
                 }
 
-                const { data } = await supabase
-                    .from('dj_tracks')
-                    .select('server_path, name')
-                    .eq('pool_id', 'BEATPORT')
-                    .ilike('server_path', `${searchPrefix}%`)
-                    .limit(5000);
+                // Pagination loop to bypass Supabase 1000-row limit
+                const BATCH_SIZE = 1000;
+                let allData: any[] = [];
+                let hasMore = true;
+                let from = 0;
 
-                if (data && data.length > 0) {
+                while (hasMore) {
+                    const { data, error } = await supabase
+                        .from('dj_tracks')
+                        .select('server_path') // Select ONLY server_path to be lightweight
+                        .eq('pool_id', 'BEATPORT')
+                        .ilike('server_path', `${searchPrefix}%`)
+                        .range(from, from + BATCH_SIZE - 1);
+
+                    if (error || !data || data.length === 0) {
+                        hasMore = false;
+                    } else {
+                        allData = [...allData, ...data];
+                        from += BATCH_SIZE;
+                        // Safety break to prevent infinite loops (max 50k items for folder structure)
+                        if (data.length < BATCH_SIZE || allData.length > 50000) {
+                            hasMore = false;
+                        }
+                    }
+                }
+
+                if (allData.length > 0) {
                     // Extract unique folder names at the current level
                     const folderSet = new Set<string>();
                     const filesAtLevel: any[] = [];
 
                     const prefixDepth = searchPrefix.split('/').filter(Boolean).length;
 
-                    data.forEach(item => {
+                    allData.forEach(item => {
                         if (!item.server_path) return;
 
                         const pathParts = item.server_path.split('/').filter(Boolean);
@@ -123,7 +142,7 @@ const PoolGrid: React.FC = () => {
                             if (pathParts.length > prefixDepth + 1) {
                                 folderSet.add(nextPart);
                             } else {
-                                // It's a file at this level
+                                // It's a file at this level (we don't need full data yet)
                                 filesAtLevel.push(item);
                             }
                         }
@@ -135,6 +154,12 @@ const PoolGrid: React.FC = () => {
                         if (b === 'MONTHS') return 1;
                         if (a.includes('COLLECTION')) return -1;
                         if (b.includes('COLLECTION')) return 1;
+                        // Numeric sort for days (01, 02, 10...)
+                        const numA = parseInt(a);
+                        const numB = parseInt(b);
+                        if (!isNaN(numA) && !isNaN(numB)) {
+                            return numA - numB;
+                        }
                         return a.localeCompare(b);
                     });
 
@@ -145,13 +170,14 @@ const PoolGrid: React.FC = () => {
                         // We're at a leaf folder with tracks
                         setFolderItems([]);
 
-                        // Fetch full track data for this folder
+                        // Fetch full track data for this folder (now we need full rows)
                         const folderPath = searchPrefix;
                         const { data: tracks } = await supabase
                             .from('dj_tracks')
                             .select('*')
                             .eq('pool_id', 'BEATPORT')
                             .ilike('server_path', `${folderPath}%`)
+                            //.limit(500) // Limit tracks per folder to avoid heavy render
                             .order('name');
 
                         if (tracks) {
