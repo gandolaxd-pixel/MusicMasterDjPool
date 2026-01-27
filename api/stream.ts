@@ -91,6 +91,56 @@ function createFlacPictureBlock(imageBuffer: Buffer): Buffer {
 }
 
 // ========================================
+// 🗑️ STRIP EXISTING ID3/METADATA FROM WAV
+// ========================================
+function stripWavMetadata(wavBuffer: Buffer): Buffer {
+    // WAV structure: RIFF + size(4) + WAVE + chunks...
+    // We need to remove 'id3 ', 'ID3 ', 'LIST' (with INFO type), etc.
+
+    const chunksToRemove = ['id3 ', 'ID3 ', 'ID32'];
+
+    let offset = 12; // Start after RIFF header (RIFF + size + WAVE)
+    const chunks: { start: number; end: number; id: string }[] = [];
+
+    // Parse all chunks
+    while (offset < wavBuffer.length - 8) {
+        const chunkId = wavBuffer.slice(offset, offset + 4).toString('ascii');
+        const chunkSize = wavBuffer.readUInt32LE(offset + 4);
+        const chunkEnd = offset + 8 + chunkSize + (chunkSize % 2); // Include padding
+
+        if (chunksToRemove.includes(chunkId) || chunkId.toLowerCase() === 'id3 ') {
+            chunks.push({ start: offset, end: Math.min(chunkEnd, wavBuffer.length), id: chunkId });
+        }
+
+        offset = chunkEnd;
+
+        // Safety check
+        if (chunkSize === 0 || offset > wavBuffer.length) break;
+    }
+
+    // If no metadata chunks found, return original
+    if (chunks.length === 0) return wavBuffer;
+
+    console.log(`🗑️ Removing ${chunks.length} existing metadata chunks from WAV`);
+
+    // Remove chunks in reverse order to maintain offsets
+    let result = wavBuffer;
+    for (let i = chunks.length - 1; i >= 0; i--) {
+        const chunk = chunks[i];
+        result = Buffer.concat([
+            result.slice(0, chunk.start),
+            result.slice(chunk.end)
+        ]);
+    }
+
+    // Update RIFF size
+    const newRiffSize = result.length - 8;
+    result.writeUInt32LE(newRiffSize, 4);
+
+    return result;
+}
+
+// ========================================
 // 🎨 WAV ID3 CHUNK BUILDER (ID3 in RIFF)
 // ========================================
 function createWavId3Chunk(imageBuffer: Buffer, filename: string): Buffer {
@@ -239,25 +289,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             // ========================================
-            // 🎵 WAV INJECTION (Append ID3 chunk)
+            // 🎵 WAV INJECTION (Replace existing + Add new)
             // ========================================
             else if (isWav) {
                 // WAV RIFF structure: "RIFF" + size + "WAVE" + chunks...
-                // We'll append an "id3 " chunk at the end and update the RIFF size
+                // First strip any existing ID3 chunks, then add ours
 
                 const riffMarker = audioBuffer.slice(0, 4).toString('ascii');
                 if (riffMarker === 'RIFF') {
+                    // 1. Remove any existing ID3/metadata chunks
+                    audioBuffer = stripWavMetadata(audioBuffer);
+
+                    // 2. Create our branded ID3 chunk
                     const id3Chunk = createWavId3Chunk(BRAND_COVER_BUFFER!, filename);
 
-                    // Update the RIFF size (at offset 4, little-endian)
+                    // 3. Update the RIFF size (at offset 4, little-endian)
                     const currentRiffSize = audioBuffer.readUInt32LE(4);
                     const newRiffSize = currentRiffSize + id3Chunk.length;
-
-                    // Write new size
                     audioBuffer.writeUInt32LE(newRiffSize, 4);
 
-                    // Append ID3 chunk
+                    // 4. Append our ID3 chunk
                     audioBuffer = Buffer.concat([audioBuffer, id3Chunk]);
+
+                    console.log(`✅ WAV branded with MusicMaster cover: ${filename}`);
                 }
 
                 res.setHeader('Content-Type', 'audio/wav');
