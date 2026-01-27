@@ -87,9 +87,9 @@ const PoolGrid: React.FC = () => {
 
                 let searchPrefix = '';
                 if (brand === 'Beatport') {
-                    const root = 'BEATPORT2025';
+                    // Start at root '/' to allow selecting BEATPORT2025, BEATPORT2026, etc.
                     const subPath = path.slice(1).join('/');
-                    searchPrefix = `/${root}/${subPath ? subPath + '/' : ''}`;
+                    searchPrefix = `/${subPath ? subPath + '/' : ''}`;
                 }
 
                 // Define prefixDepth for later use
@@ -100,10 +100,9 @@ const PoolGrid: React.FC = () => {
                 const folderSet = new Set<string>();
 
                 // Query cache table logic
-                // parent_path in DB is like '/BEATPORT2025/MONTHS' (no trailing slash usually)
-                // Our searchPrefix is '/BEATPORT2025/MONTHS/' (with trailing slash)
-                // We strip the trailing slash for the exact match.
-                const parentPathToQuery = searchPrefix.replace(/\/$/, '');
+                // Ensure root '/' is handled correctly (don't replace strictly if it results in empty string, unless DB uses empty string for root parent?)
+                // My indexer used '/' for top level parent.
+                const parentPathToQuery = searchPrefix === '/' ? '/' : searchPrefix.replace(/\/$/, '');
 
                 const { data: cachedFolders } = await supabase
                     .from('dj_folders')
