@@ -134,13 +134,30 @@ async function flushBatch(poolName) {
 async function scanFolderRecursive(folderPath, baseFolder, poolName) {
     const auth = Buffer.from(`${STORAGE_USER}:${STORAGE_PASS}`).toString('base64');
     const cleanPath = folderPath.replace(/([^:]\/)\/+/g, "$1");
-    const url = `https://${STORAGE_HOST}${cleanPath}`;
+    // Encode each path segment to handle special chars like #, ?, etc.
+    const encodedPath = cleanPath.split('/').map(segment => encodeURIComponent(segment)).join('/');
+    const url = `https://${STORAGE_HOST}${encodedPath}`;
+
+    const MAX_RETRIES = 3;
+    let response;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            response = await axios.get(url, {
+                headers: { 'Authorization': `Basic ${auth}` },
+                timeout: 60000 // 60 second timeout
+            });
+            break; // Success, exit retry loop
+        } catch (retryError) {
+            if (attempt === MAX_RETRIES) {
+                console.log(`\n⚠️ Failed after ${MAX_RETRIES} attempts: ${cleanPath}`);
+                return; // Give up on this folder
+            }
+            console.log(`\n🔄 Retry ${attempt}/${MAX_RETRIES} for: ${cleanPath.substring(0, 50)}...`);
+            await new Promise(r => setTimeout(r, 2000)); // Wait 2s before retry
+        }
+    }
 
     try {
-        const response = await axios.get(url, {
-            headers: { 'Authorization': `Basic ${auth}` },
-            timeout: 20000
-        });
 
         const html = response.data;
         const root = parse(html);
@@ -215,7 +232,7 @@ async function scanFolderRecursive(folderPath, baseFolder, poolName) {
             }
         }
     } catch (error) {
-        // Ignorar errores menores
+        console.log(`\n❌ Error parsing folder ${cleanPath}: ${error.message}`);
     }
 }
 

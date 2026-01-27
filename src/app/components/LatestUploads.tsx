@@ -1,5 +1,5 @@
 import { Play, Pause, Download, Lock, X, Music2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { getTrackUrl } from '../../utils/urlUtils';
 import { TrackSkeleton } from './TrackSkeleton';
 import { usePlayer } from '../../context/PlayerContext'; // Import usePlayer
@@ -34,10 +34,10 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, curr
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // Reset page when genre changes
-  useMemo(() => {
+  // Reset page when genre or tracks change
+  useEffect(() => {
     setCurrentPage(1);
-  }, [selectedGenre]);
+  }, [selectedGenre, tracks]);
 
   const totalPages = Math.ceil(filteredTracks.length / itemsPerPage);
   const currentTracks = filteredTracks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
