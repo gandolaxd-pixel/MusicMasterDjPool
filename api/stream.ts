@@ -4,6 +4,7 @@ import axios from 'axios';
 import { basename, join } from 'path';
 import * as fs from 'fs';
 import NodeID3 from 'node-id3';
+import { createClient } from '@supabase/supabase-js';
 
 // Load credentials from Environment Variables
 const STORAGE_CONFIG = {
@@ -11,6 +12,16 @@ const STORAGE_CONFIG = {
     pass: process.env.STORAGE_PASS,
     host: process.env.STORAGE_HOST || "u529624-sub1.your-storagebox.de"
 };
+
+// --- SECURITY: SUPABASE CLIENT ---
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+    console.error("❌ CRITICAL: Missing Supabase credentials in Environment Variables");
+}
+
+const supabase = createClient(supabaseUrl!, supabaseKey!);
 
 // Cache branding buffer to avoid reading FS on every request
 let BRAND_COVER_BUFFER: Buffer | null = null;
@@ -177,11 +188,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Range');
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Range, Authorization');
 
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
+    }
+
+    // --- AUTHENTICATION CHECK ---
+    const authHeader = req.headers.authorization;
+    const token = authHeader ? authHeader.split(' ')[1] : (req.query.token as string);
+
+    if (!token) {
+        return res.status(401).json({ error: 'Unauthorized: No token provided' });
+    }
+
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) throw new Error('Invalid token');
+    } catch (error) {
+        console.error("Auth Fail in Vercel:", error);
+        return res.status(403).json({ error: 'Unauthorized: Invalid token' });
     }
 
     if (!STORAGE_CONFIG.user || !STORAGE_CONFIG.pass) {

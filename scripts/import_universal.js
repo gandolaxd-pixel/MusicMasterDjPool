@@ -5,16 +5,16 @@ import { parse } from 'node-html-parser';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Configuración Supabase
+// Configuración Supabase - USAR SERVICE_ROLE para bypasear RLS
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mnfcbeasyebrgxhfitiv.supabase.co';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // ← FIX: usar SERVICE_ROLE
 
 // Configuración StorageBox
-const STORAGE_USER = process.env.STORAGE_USER || 'u529624-sub1';
-const STORAGE_PASS = process.env.STORAGE_PASS || 'Gandola2026!';
-const STORAGE_HOST = process.env.STORAGE_HOST || 'u529624-sub1.your-storagebox.de';
+const STORAGE_USER = process.env.HETZNER_USER || 'u529624-sub1';
+const STORAGE_PASS = process.env.HETZNER_PASS || 'Gandola2026!';
+const STORAGE_HOST = process.env.HETZNER_HOST || 'u529624-sub1.your-storagebox.de';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Estado Global
 let totalFound = 0;

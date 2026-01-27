@@ -98,7 +98,9 @@ const downloadLimiter = rateLimit({
 
 app.use('/api/search', apiLimiter);
 
+// --- STATIC FILES ---
 app.use(express.static('public'));
+app.use(express.static('dist')); // Production build files
 
 // --- SECURE CREDENTIALS ---
 const STORAGE_CONFIG = {
@@ -244,6 +246,22 @@ app.get('/api/stream', requireAuth, async (req, res, next) => {
 app.get('/health', async (req, res) => {
     const { error } = await supabase.from('tracks').select('count', { count: 'exact', head: true });
     res.json({ status: error ? 'db_error' : 'ok' });
+});
+
+// --- SPA FALLBACK - Must be AFTER all API routes ---
+// This serves index.html for all routes that are not API endpoints or static files
+// Fixes 404 errors on page refresh with React Router
+app.use((req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+        return next();
+    }
+    // Skip static files that exist (handled by express.static above)
+    if (req.method === 'GET' && !req.path.includes('.')) {
+        // Serve index.html for all other routes (SPA fallback)
+        return res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    }
+    next();
 });
 
 // --- START SERVER ---

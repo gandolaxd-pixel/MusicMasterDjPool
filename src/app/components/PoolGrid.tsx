@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
-import { Disc, ArrowLeft, Folder } from 'lucide-react';
+import { Disc, ArrowLeft, Folder, Home, ChevronRight } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { useCrate } from '../../context/CrateContext';
 import { useAuth } from '../../context/AuthContext';
@@ -11,19 +11,13 @@ interface SpecialNames {
 }
 
 const PoolGrid: React.FC = () => {
-    // Navigation State
-    const [view, setView] = useState<'brands' | 'years' | 'months' | 'folders' | 'tracks'>('brands');
-
-    const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
-    const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null); // "Beatport 2025"
-    const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-    const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+    // Navigation State - supports unlimited depth
+    const [path, setPath] = useState<string[]>([]); // ["Beatport", "BEATPORT2025", "MONTHS", "DECEMBER", ...]
+    const [currentLevel, setCurrentLevel] = useState<'brands' | 'navigation' | 'tracks'>('brands');
 
     // Data State
     const [brandList, setBrandList] = useState<string[]>([]);
-    const [yearList, setYearList] = useState<string[]>([]); // ["Beatport 2025", "Beatport 2026"]
-    const [monthList, setMonthList] = useState<string[]>([]);
-    const [folderList, setFolderList] = useState<string[]>([]);
+    const [folderItems, setFolderItems] = useState<string[]>([]);
     const [trackList, setTrackList] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -75,157 +69,152 @@ const PoolGrid: React.FC = () => {
         "DMP": "dmp.png"
     };
 
+    // Load brands on mount
     useEffect(() => {
-        if (view === 'brands') {
+        if (currentLevel === 'brands') {
             const allPools = Object.keys(specialNames).sort();
             const unique = Array.from(new Set(allPools));
             setBrandList(unique);
         }
-    }, [view]);
+    }, [currentLevel]);
 
-    // 1. FETCH YEARS
+    // Navigate folder structure based on server_path
     useEffect(() => {
-        if (view === 'years' && selectedBrand) {
-            const fetchYears = async () => {
+        if (currentLevel === 'navigation' && path.length > 0) {
+            const fetchFolderContents = async () => {
                 setLoading(true);
-                const searchTerm = selectedBrand.includes('Beatport') ? 'Beatport%' : `${selectedBrand}%`;
+                const brand = path[0];
 
-                const { data } = await supabase
-                    .from('dj_tracks')
-                    .select('pool_id')
-                    .ilike('pool_id', searchTerm);
+                // Build the path prefix to search
+                // path[0] = "Beatport" (brand name)
+                // path[1+] = folder levels from server_path
 
-                if (data) {
-                    const uniquePools = Array.from(new Set(data.map(item => item.pool_id).filter(Boolean)));
-                    setYearList(uniquePools.sort().reverse());
+                let searchPrefix = '';
+                if (brand === 'Beatport') {
+                    // For Beatport, search in server_path starting with /BEATPORT2025/
+                    if (path.length === 1) {
+                        searchPrefix = '/BEATPORT2025/';
+                    } else {
+                        searchPrefix = '/' + path.slice(1).join('/') + '/';
+                    }
                 }
-                setLoading(false);
-            };
-            fetchYears();
-        }
-    }, [view, selectedBrand]);
 
-    // 2. FETCH MONTHS
-    useEffect(() => {
-        if (view === 'months' && selectedPoolId) {
-            const fetchMonths = async () => {
-                setLoading(true);
                 const { data } = await supabase
                     .from('dj_tracks')
-                    .select('original_folder')
-                    .eq('pool_id', selectedPoolId);
+                    .select('server_path, name')
+                    .eq('pool_id', 'BEATPORT')
+                    .ilike('server_path', `${searchPrefix}%`)
+                    .limit(5000);
 
-                if (data) {
-                    const months = new Set<string>();
+                if (data && data.length > 0) {
+                    // Extract unique folder names at the current level
+                    const folderSet = new Set<string>();
+                    const filesAtLevel: any[] = [];
+
+                    const prefixDepth = searchPrefix.split('/').filter(Boolean).length;
+
                     data.forEach(item => {
-                        if (item.original_folder) {
-                            const parts = item.original_folder.split('/');
-                            if (parts.length > 0 && parts[0]) {
-                                months.add(parts[0].toUpperCase());
+                        if (!item.server_path) return;
+
+                        const pathParts = item.server_path.split('/').filter(Boolean);
+
+                        // Check if there's a folder at the next level
+                        if (pathParts.length > prefixDepth) {
+                            const nextPart = pathParts[prefixDepth];
+                            // Check if this is a folder (has more parts after) or a file
+                            if (pathParts.length > prefixDepth + 1) {
+                                folderSet.add(nextPart);
+                            } else {
+                                // It's a file at this level
+                                filesAtLevel.push(item);
                             }
                         }
                     });
 
-                    const monthOrder: { [key: string]: number } = {
-                        'JANUARY': 1, 'FEBRUARY': 2, 'MARCH': 3, 'APRIL': 4, 'MAY': 5, 'JUNE': 6,
-                        'JULY': 7, 'AUGUST': 8, 'SEPTEMBER': 9, 'OCTOBER': 10, 'NOVEMBER': 11, 'DECEMBER': 12
-                    };
-
-                    const sortedMonths = Array.from(months).sort((a, b) => {
-                        const orderA = monthOrder[a] || 99;
-                        const orderB = monthOrder[b] || 99;
-                        if (orderA !== orderB) return orderA - orderB;
+                    // Sort folders: put MONTHS first, then BEATPORT COLLECTION, then alphabetically
+                    const sortedFolders = Array.from(folderSet).sort((a, b) => {
+                        if (a === 'MONTHS') return -1;
+                        if (b === 'MONTHS') return 1;
+                        if (a.includes('COLLECTION')) return -1;
+                        if (b.includes('COLLECTION')) return 1;
                         return a.localeCompare(b);
                     });
 
-                    setMonthList(sortedMonths);
-                }
-                setLoading(false);
-            };
-            fetchMonths();
-        }
-    }, [view, selectedPoolId]);
+                    if (sortedFolders.length > 0) {
+                        setFolderItems(sortedFolders);
+                        setTrackList([]);
+                    } else if (filesAtLevel.length > 0) {
+                        // We're at a leaf folder with tracks
+                        setFolderItems([]);
 
-    // 3. FETCH FOLDERS
-    useEffect(() => {
-        if (view === 'folders' && selectedPoolId && selectedMonth) {
-            const fetchFolders = async () => {
-                setLoading(true);
-                const { data } = await supabase
-                    .from('dj_tracks')
-                    .select('original_folder')
-                    .eq('pool_id', selectedPoolId)
-                    .ilike('original_folder', `${selectedMonth}/%`);
+                        // Fetch full track data for this folder
+                        const folderPath = searchPrefix;
+                        const { data: tracks } = await supabase
+                            .from('dj_tracks')
+                            .select('*')
+                            .eq('pool_id', 'BEATPORT')
+                            .ilike('server_path', `${folderPath}%`)
+                            .order('name');
 
-                if (data) {
-                    const uniqueFolders = new Set<string>();
-                    data.forEach(item => {
-                        if (item.original_folder) {
-                            const part = item.original_folder.substring(selectedMonth.length + 1);
-                            if (part) uniqueFolders.add(part);
+                        if (tracks) {
+                            // Filter only files in this exact folder
+                            const exactFiles = tracks.filter(t => {
+                                const parts = t.server_path.split('/').filter(Boolean);
+                                return parts.length === prefixDepth + 1; // File directly in this folder
+                            });
+
+                            const mapped = exactFiles.map((item: any) => ({
+                                ...item,
+                                pool_origin: item.pool_id,
+                                file_path: item.server_path,
+                                title: item.title || item.name,
+                            }));
+                            setTrackList(mapped);
+                            setCurrentLevel('tracks');
                         }
-                    });
-                    setFolderList(Array.from(uniqueFolders).sort());
+                    }
                 }
                 setLoading(false);
             };
-            fetchFolders();
+            fetchFolderContents();
         }
-    }, [view, selectedPoolId, selectedMonth]);
-
-    // 4. FETCH TRACKS
-    useEffect(() => {
-        if (view === 'tracks' && selectedFolder && selectedPoolId && selectedMonth) {
-            const fetchTracks = async () => {
-                setLoading(true);
-                const fullFolderPath = `${selectedMonth}/${selectedFolder}`;
-
-                const { data } = await supabase
-                    .from('dj_tracks')
-                    .select('*')
-                    .eq('pool_id', selectedPoolId)
-                    .eq('original_folder', fullFolderPath)
-                    .order('created_at', { ascending: false });
-
-                if (data) {
-                    const mapped = data.map((item: any) => ({
-                        ...item,
-                        pool_origin: item.pool_id,
-                        file_path: item.server_path,
-                        title: item.title || item.name,
-                    }));
-
-                    setTrackList(mapped);
-                }
-                setLoading(false);
-            };
-            fetchTracks();
-        }
-    }, [view, selectedFolder, selectedPoolId, selectedMonth]);
+    }, [currentLevel, path]);
 
     // --- NAVIGATION HANDLERS ---
 
     const handleBrandClick = (brand: string) => {
-        setSelectedBrand(brand);
-        if (brand.toLowerCase().includes('beatport')) {
-            setView('years');
-        } else {
-            setView('years');
-        }
+        setPath([brand]);
+        setCurrentLevel('navigation');
+    };
+
+    const handleFolderClick = (folder: string) => {
+        setPath([...path, folder]);
     };
 
     const handleBack = () => {
-        if (view === 'tracks') setView('folders');
-        else if (view === 'folders') setView('months');
-        else if (view === 'months') setView('years');
-        else if (view === 'years') setView('brands');
+        if (path.length <= 1) {
+            setPath([]);
+            setCurrentLevel('brands');
+        } else {
+            const newPath = [...path];
+            newPath.pop();
+            setPath(newPath);
+            if (currentLevel === 'tracks') {
+                setCurrentLevel('navigation');
+            }
+        }
+    };
+
+    const goHome = () => {
+        setPath([]);
+        setCurrentLevel('brands');
+        setFolderItems([]);
+        setTrackList([]);
     };
 
     // --- RENDERERS ---
 
-
-
-    if (view === 'brands') {
+    if (currentLevel === 'brands') {
         return (
             <div className="pt-10">
                 <div className="flex justify-between items-end mb-8 px-4">
@@ -236,7 +225,6 @@ const PoolGrid: React.FC = () => {
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
                     {brandList.map((name) => {
-                        // Skip legacy "Beatport New Releases"
                         if (name === 'Beatport New Releases') return null;
 
                         const imageName = specialNames[name] || `${name.toLowerCase().replace(/\s/g, '')}.png`;
@@ -274,120 +262,79 @@ const PoolGrid: React.FC = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pt-10 pb-20">
-            {/* Common Header for Inner Views */}
+            {/* Breadcrumb Navigation */}
+            <div className="flex items-center gap-2 px-4 overflow-x-auto py-2 border-b border-white/5 pb-6">
+                <button onClick={goHome} className="p-2 hover:bg-white/5 rounded-lg text-gray-500 transition-colors">
+                    <Home size={18} />
+                </button>
+                {path.map((p, i) => (
+                    <div key={i} className="flex items-center gap-2 flex-shrink-0">
+                        <ChevronRight size={14} className="text-gray-800" />
+                        <button
+                            onClick={() => {
+                                const newPath = path.slice(0, i + 1);
+                                setPath(newPath);
+                                setCurrentLevel('navigation');
+                            }}
+                            className={`text-[10px] font-black uppercase tracking-[0.2em] ${i === path.length - 1 ? 'text-[#ff0055]' : 'text-gray-600 hover:text-gray-400'}`}
+                        >
+                            {p}
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            {/* Header */}
             <div className="flex items-center justify-between gap-4 px-4">
                 <div className="flex items-center gap-4">
                     <button onClick={handleBack} className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl">
                         <ArrowLeft size={20} className="group-hover:scale-110 text-white" />
                     </button>
                     <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
-                        {view === 'years' && <><span className="text-[#ff0055]">{selectedBrand}</span> Collections</>}
-                        {view === 'months' && <><span className="text-[#ff0055]">{selectedPoolId}</span> Archives</>}
-                        {view === 'folders' && <><span className="text-[#ff0055]">{selectedMonth}</span> Folders</>}
-                        {view === 'tracks' && <><span className="text-[#ff0055]">{selectedFolder}</span> Tracks</>}
+                        <span className="text-[#ff0055]">{path[path.length - 1]}</span>
+                        {currentLevel === 'tracks' ? ' Tracks' : ' Contents'}
                     </h2>
                 </div>
-
             </div>
 
-            {/* YEARS VIEW */}
-            {view === 'years' && (
+            {/* FOLDER NAVIGATION VIEW */}
+            {currentLevel === 'navigation' && (
                 <div className="flex flex-col gap-2 px-4">
                     {loading ? (
                         <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading...</div>
-                    ) : yearList.map((yearPool) => (
-                        <div
-                            key={yearPool}
-                            onClick={() => { setSelectedPoolId(yearPool); setView('months'); }}
-                            className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all"
-                        >
-                            <div className="flex items-center gap-5">
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5 transition-colors text-gray-600 group-hover:text-[#ff0055]">
-                                    <Folder size={22} />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{yearPool}</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">year</span>
-                                        <span className="w-1 h-1 bg-gray-800 rounded-full" />
-                                        <span className="text-[9px] font-bold text-gray-600 uppercase">{yearPool.includes('20') ? 'Annual Collection' : 'Pool Archive'}</span>
+                    ) : folderItems.length > 0 ? (
+                        folderItems.map((folder) => (
+                            <div
+                                key={folder}
+                                onClick={() => handleFolderClick(folder)}
+                                className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all"
+                            >
+                                <div className="flex items-center gap-5">
+                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5 transition-colors text-gray-600 group-hover:text-[#ff0055]">
+                                        <Folder size={22} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{folder}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">folder</span>
+                                        </div>
                                     </div>
                                 </div>
+                                <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors"><Folder size={18} /></div>
                             </div>
-                            <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors"><Folder size={18} /></div>
-                        </div>
-                    ))}
-                    {!loading && yearList.length === 0 && <p className="text-gray-500">No collections found.</p>}
-                </div>
-            )}
-
-            {/* MONTHS VIEW */}
-            {view === 'months' && (
-                <div className="flex flex-col gap-2 px-4">
-                    {loading ? (
-                        <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading months...</div>
-                    ) : monthList.map((month) => (
-                        <div
-                            key={month}
-                            onClick={() => { setSelectedMonth(month); setView('folders'); }}
-                            className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all"
-                        >
-                            <div className="flex items-center gap-5">
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5 transition-colors text-gray-600 group-hover:text-[#ff0055]">
-                                    <Folder size={22} />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{month}</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">month</span>
-                                        <span className="w-1 h-1 bg-gray-800 rounded-full" />
-                                        <span className="text-[9px] font-bold text-gray-600 uppercase">Library Folder</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors"><Folder size={18} /></div>
-                        </div>
-                    ))}
-                    {!loading && monthList.length === 0 && <p className="text-gray-500">No months found (Running reorganization...).</p>}
-                </div>
-            )}
-
-            {/* FOLDERS VIEW */}
-            {view === 'folders' && (
-                <div className="flex flex-col gap-2 px-4">
-                    {loading ? (
-                        <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading folders...</div>
-                    ) : folderList.map((folder) => (
-                        <div
-                            key={folder}
-                            onClick={() => { setSelectedFolder(folder); setView('tracks'); }}
-                            className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all"
-                        >
-                            <div className="flex items-center gap-5">
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5 transition-colors text-[#ff0055] group-hover:bg-[#ff0055]/10">
-                                    <Disc size={22} className="group-hover:rotate-90 transition-transform duration-500" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{folder}</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">pack</span>
-                                        <span className="w-1 h-1 bg-gray-800 rounded-full" />
-                                        <span className="text-[9px] font-bold text-gray-600 uppercase">{selectedMonth}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors"><Folder size={18} /></div>
-                        </div>
-                    ))}
+                        ))
+                    ) : (
+                        <p className="text-gray-500 py-10 text-center">No folders found at this level.</p>
+                    )}
                 </div>
             )}
 
             {/* TRACKS VIEW */}
-            {view === 'tracks' && (
+            {currentLevel === 'tracks' && (
                 <div className="px-4">
                     {loading ? (
                         <div className="text-white">Loading tracks...</div>
-                    ) : (
+                    ) : trackList.length > 0 ? (
                         <LatestUploads
                             tracks={trackList}
                             selectedGenre={null}
@@ -399,6 +346,8 @@ const PoolGrid: React.FC = () => {
                             onToggleCrate={toggleCrate}
                             crate={crate}
                         />
+                    ) : (
+                        <p className="text-gray-500 py-10 text-center">No tracks found in this folder.</p>
                     )}
                 </div>
             )}
