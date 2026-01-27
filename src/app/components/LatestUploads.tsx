@@ -2,6 +2,7 @@ import { Play, Pause, Download, Lock, X, Music2, ChevronLeft, ChevronRight } fro
 import { useMemo, useState } from 'react';
 import { getTrackUrl } from '../../utils/urlUtils';
 import { TrackSkeleton } from './TrackSkeleton';
+import { usePlayer } from '../../context/PlayerContext'; // Import usePlayer
 
 const POOL_COLORS: Record<string, string> = {
   'DJ City': '#ff0055', 'BPM Supreme': '#ff6b00', 'Club Killers': '#ffcc00', 'Heavy Hits': '#00ffcc',
@@ -22,6 +23,7 @@ interface LatestUploadsProps {
 }
 
 export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, onPlay, currentTrack, isPlaying, loading = false }: LatestUploadsProps) {
+  const { token } = usePlayer(); // Get secure token
 
   const filteredTracks = useMemo(() => {
     if (!selectedGenre) return tracks;
@@ -119,7 +121,7 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, onPl
 
                       <div className="md:col-span-1 flex justify-end items-center gap-3">
                         <a
-                          href={getTrackUrl(track, true)}
+                          href={getTrackUrl(track, true, token)}
                           className={`flex items-center justify-center w-9 h-9 rounded-lg transition-all ${user ? 'bg-[#ff0055] text-white hover:brightness-110 hover:scale-105 shadow-[0_0_10px_rgba(255,0,85,0.3)]' : 'bg-white/5 border border-white/10 text-gray-500 cursor-not-allowed'}`}
                           onClick={(e) => { if (!user) e.preventDefault(); }}
                         >

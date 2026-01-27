@@ -14,15 +14,37 @@ interface PlayerContextType {
     pause: () => void;
     nextTrack: () => void;
     prevTrack: () => void;
+    token?: string;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [queue, setQueue] = useState<Track[]>([]);
-    const [currentIndex, setCurrentIndex] = useState<number>(-1);
+    const [user, setUser] = useState<any>(null);
+    const [token, setToken] = useState<string | undefined>(undefined);
+
+    // Get Session Token for Audio Auth
+    useEffect(() => {
+        import('../supabase').then(({ supabase }) => {
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session) {
+                    setToken(session.access_token);
+                    setUser(session.user);
+                }
+            });
+
+            supabase.auth.onAuthStateChange((_event, session) => {
+                if (session) {
+                    setToken(session.access_token);
+                    setUser(session.user);
+                } else {
+                    setToken(undefined);
+                    setUser(null);
+                }
+            });
+        });
+    }, []);
+
 
     const playTrack = (track: Track) => {
         // Normalizar track para asegurar compatibilidad
@@ -37,10 +59,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (currentTrack && (currentTrack.id === normalizedTrack.id || currentTrack.title === normalizedTrack.title)) {
             setIsPlaying(!isPlaying);
         } else {
-            // Generate Stream URL using central utility
-            if (!normalizedTrack.streamUrl) {
-                normalizedTrack.streamUrl = getTrackUrl(normalizedTrack);
+            // Generate Stream URL using central utility + SECURITY TOKEN
+            // We force recalculation here to ensure token is fresh
+            if (!normalizedTrack.streamUrl || token) {
+                normalizedTrack.streamUrl = getTrackUrl(normalizedTrack, false, token);
             }
+
             setCurrentTrack(normalizedTrack);
             // If playing a single track, it becomes the only item in queue or just current
             // For simplicity, let's say playing a single track clears queue or adds to it?
@@ -59,7 +83,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             ...t,
             id: t.id || t.name || 'unknown-id',
             title: t.title || t.name || 'Unknown Title',
-            streamUrl: t.streamUrl || getTrackUrl(t),
+            streamUrl: getTrackUrl(t, false, token), // Always refresh with token
             file_path: t.file_path || t.server_path || '',
         }));
 
@@ -97,7 +121,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const pause = () => setIsPlaying(false);
 
     return (
-        <PlayerContext.Provider value={{ currentTrack, isPlaying, queue, playTrack, playQueue, togglePlay, play, pause, nextTrack, prevTrack }}>
+        <PlayerContext.Provider value={{ currentTrack, isPlaying, queue, playTrack, playQueue, togglePlay, play, pause, nextTrack, prevTrack, token }}>
             {children}
         </PlayerContext.Provider>
     );

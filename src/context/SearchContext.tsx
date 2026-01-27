@@ -34,23 +34,34 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (page === 1) setLastSearchTerm(term);
 
         try {
-            // ✅ Búsqueda directa en Supabase (tabla dj_tracks o tracks)
+            // ✅ Búsqueda directa en Supabase (tabla tracks)
             const { supabase } = await import('../supabase');
 
             // Usamos ilike para búsqueda insensible a mayúsculas
+            // IMPORTANTE: La tabla 'tracks' tiene columna 'title', no 'name' (según migración)
             const { data, error, count } = await supabase
-                .from('dj_tracks') // Buscamos en la nueva tabla masiva
+                .from('tracks') // Buscamos en la nueva tabla migrada
                 .select('*', { count: 'exact' })
-                .ilike('name', `%${term}%`)
-                .eq('format', 'file') // Solo archivos, no carpetas
+                .ilike('title', `%${term}%`)
+                // .eq('format', 'file') // Eliminado porque nuestra tabla 'tracks' solo contiene archivos de música
                 .range((page - 1) * 50, page * 50 - 1); // Paginación de 50 en 50
 
             if (error) throw error;
 
-            const results = data || [];
+            const rawResults = data || [];
+
+            // Normalize DB results to Frontend properties (name vs title)
+            const results = rawResults.map((t: any) => ({
+                ...t,
+                name: t.title || t.name || 'Unknown', // Frontend uses 'name'
+                artist: t.artist || 'Unknown Artist',
+                file_path: t.file_path,
+                // Ensure ID presence
+                id: t.id
+            }));
 
             setServerPage(page);
-            setHasMore(results.length === 50); // Si trae 50, asumimos quiza hay más
+            setHasMore(rawResults.length === 50); // Si trae 50, asumimos quiza hay más
             setTotalServerTracks(count || 0);
 
             if (page === 1) {

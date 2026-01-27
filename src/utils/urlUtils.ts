@@ -8,51 +8,44 @@ import { Track } from '../types';
  * 2. If VITE_STORAGE_URL is set (Cloudflare/VPS), append path to it.
  * 3. Fallback to API_URL/stream proxy.
  */
-export function getTrackUrl(track: Track, asDownload: boolean = false): string {
+// Note: We need the Supabase session token for secure streaming.
+// Since this function is sync, the token should be passed in or retrieved from a synchronous store if available.
+// For now, let's allow passing an optional token.
+
+export function getTrackUrl(track: Track, asDownload: boolean = false, token?: string): string {
     // 1. Check for absolute URL
     if (track.streamUrl && track.streamUrl.startsWith('http')) {
+        let url = track.streamUrl;
         if (asDownload) {
-            const separator = track.streamUrl.includes('?') ? '&' : '?';
-            return track.streamUrl.includes('download=true')
-                ? track.streamUrl
-                : `${track.streamUrl}${separator}download=true`;
+            const separator = url.includes('?') ? '&' : '?';
+            url = url.includes('download=true') ? url : `${url}${separator}download=true`;
         }
-        return track.streamUrl;
+        // If we have a token and it's our API, append it? 
+        // Usually absolute URLs might be external.
+        return url;
     }
 
     const path = track.file_path || track.server_path || track.filename;
 
     if (!path) return '';
 
-    // If path is already absolute URL, return it
+    // If path is already absolute URL
     if (path.startsWith('http://') || path.startsWith('https://')) {
         return path;
     }
 
-    // 2. Use Direct Storage (Cloudflare Tunnel) if configured
-    // EXCEPTION: If downloading, force API proxy to inject ID3 tags (Cover Art)
-    if (STORAGE_URL && !asDownload) {
-        // Remove leading slash if present to avoid double slashes
-        const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-        // Ensure STORAGE_URL doesn't end with slash
-        const cleanStorageUrl = STORAGE_URL.endsWith('/') ? STORAGE_URL.slice(0, -1) : STORAGE_URL;
+    // 2. Build Query Params
+    let query = `path=${encodeURIComponent(path)}`;
+    if (asDownload) query += '&download=true';
+    if (token) query += `&token=${encodeURIComponent(token)}`;
 
-        // Encode path components to handle spaces/special chars safely
-        // We split by '/' to encode each segment, preserving directory structure
-        const encodedPath = cleanPath.split('/').map(encodeURIComponent).join('/');
+    // 3. Construct URL
+    // Always go through /api/stream to ensure Auth validation happens on Backend (unless we expose Direct Storage with signed URLs in future)
+    // We removed 'Direct Storage' bypass because we want "Mega Security" checking the user session every time.
 
-        return `${cleanStorageUrl}/${encodedPath}`;
-    }
-
-    // 3. Fallback to API Proxy (Serverless /api/stream)
-    // When running on Vercel, this points to the internal /api/stream function
-    const query = `path=${encodeURIComponent(path)}${asDownload ? '&download=true' : ''}`;
-
-    // Check if we have a full external API_URL configured (e.g. Tunnel)
     if (API_URL && API_URL.startsWith('http')) {
         return `${API_URL}/api/stream?${query}`;
     }
 
-    // Default to relative path for Serverless (Same Domain)
     return `/api/stream?${query}`;
 }
