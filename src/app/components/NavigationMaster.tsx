@@ -84,28 +84,68 @@ export function Navigation({ user, currentView, onSearch }: {
 
         {/* 3. USER ACTIONS (Flex Initial - Right Align) */}
         <div className="flex items-center justify-end gap-4 z-20 w-[200px]">
-          {/* BUSCADOR - Se expande hacia la izquierda */}
-          <div className="relative flex items-center justify-end" onMouseEnter={() => setIsSearchOpen(true)} onMouseLeave={() => { if (searchTerm === '') setIsSearchOpen(false); }}>
-            <motion.div
-              animate={{ width: isSearchOpen ? 240 : 40 }}
-              className={`absolute right-0 flex items-center h-10 rounded-xl border ${isSearchOpen ? 'bg-black/95 border-white/20 shadow-xl' : 'bg-transparent border-transparent'}`}
-            >
-              <button onClick={triggerSearch} className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white flex-shrink-0"><Search size={18} /></button>
-              <AnimatePresence>
-                {isSearchOpen && (
-                  <motion.input
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    autoFocus type="text" placeholder="Search..."
-                    className="bg-transparent border-none outline-none text-[11px] font-bold text-white uppercase w-full pr-4"
-                    value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && triggerSearch()}
-                  />
-                )}
-              </AnimatePresence>
-            </motion.div>
-            {/* Spacer to keep layout stable */}
-            <div className="w-10 h-10" />
-          </div>
+          {/* BUSCADOR - Click para abrir overlay */}
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+          >
+            <Search size={18} />
+          </button>
+
+          {/* SEARCH OVERLAY */}
+          <AnimatePresence>
+            {isSearchOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl"
+                onClick={() => setIsSearchOpen(false)}
+              >
+                <div
+                  className="max-w-3xl mx-auto pt-32 px-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Close button */}
+                  <button
+                    onClick={() => setIsSearchOpen(false)}
+                    className="absolute top-6 right-6 text-gray-400 hover:text-white text-2xl"
+                  >
+                    ✕
+                  </button>
+
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search size={24} className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <motion.input
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      autoFocus
+                      type="text"
+                      placeholder="Search tracks, artists, packs..."
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-16 pr-6 text-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#ff0055]/50 focus:ring-2 focus:ring-[#ff0055]/20"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          triggerSearch();
+                          setIsSearchOpen(false);
+                        }
+                        if (e.key === 'Escape') {
+                          setIsSearchOpen(false);
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* Hint */}
+                  <p className="text-center text-gray-500 text-xs mt-6 uppercase tracking-widest">
+                    Press <span className="text-white">Enter</span> to search or <span className="text-white">Esc</span> to close
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* USUARIO */}
           {user ? (
