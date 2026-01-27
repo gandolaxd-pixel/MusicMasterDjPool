@@ -138,7 +138,8 @@ async function flushBatch() {
             pool_id: track.poolId,
             format: 'file',
             drop_month: track.dropMonth,
-            drop_day: track.dropDay,
+            // Extract first number from day (handles "11 Y 12" case)
+            drop_day: parseInt(track.dropDay) || 1,
             created_at: new Date().toISOString()
         };
     });
