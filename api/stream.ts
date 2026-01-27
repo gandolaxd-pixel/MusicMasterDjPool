@@ -16,9 +16,6 @@ const STORAGE_CONFIG = {
 let BRAND_COVER_BUFFER: Buffer | null = null;
 
 try {
-    // Attempt to load cover from local public immediately
-    // Note: In Vercel serverless, public files might be in process.cwd()/public depending on config
-    // Fallback: Check standard locations
     const possiblePaths = [
         join(process.cwd(), 'public', 'images', 'brand_cover.png'),
         join(process.cwd(), 'images', 'brand_cover.png'),
@@ -34,6 +31,95 @@ try {
     }
 } catch (err) {
     console.error("⚠️ Could not load default cover art on startup:", err);
+}
+
+// ========================================
+// 🎨 FLAC METADATA PICTURE BLOCK BUILDER
+// ========================================
+function createFlacPictureBlock(imageBuffer: Buffer): Buffer {
+    // FLAC PICTURE block structure:
+    // - Picture type (4 bytes): 3 = Front cover
+    // - MIME type length (4 bytes) + MIME string
+    // - Description length (4 bytes) + Description string
+    // - Width, Height, Color depth, Colors used (4 bytes each)
+    // - Picture data length (4 bytes) + Picture data
+
+    const mimeType = Buffer.from('image/png', 'utf8');
+    const description = Buffer.from('Cover', 'utf8');
+
+    // Create the picture block data
+    const blockData = Buffer.alloc(
+        4 + // picture type
+        4 + mimeType.length + // mime
+        4 + description.length + // description
+        4 + 4 + 4 + 4 + // width, height, depth, colors
+        4 + imageBuffer.length // picture data
+    );
+
+    let offset = 0;
+
+    // Picture type: 3 = Front cover
+    blockData.writeUInt32BE(3, offset); offset += 4;
+
+    // MIME type
+    blockData.writeUInt32BE(mimeType.length, offset); offset += 4;
+    mimeType.copy(blockData, offset); offset += mimeType.length;
+
+    // Description
+    blockData.writeUInt32BE(description.length, offset); offset += 4;
+    description.copy(blockData, offset); offset += description.length;
+
+    // Width, Height (0 = unknown), Color depth (24bit), Colors used (0)
+    blockData.writeUInt32BE(0, offset); offset += 4; // width
+    blockData.writeUInt32BE(0, offset); offset += 4; // height
+    blockData.writeUInt32BE(24, offset); offset += 4; // color depth
+    blockData.writeUInt32BE(0, offset); offset += 4; // colors used
+
+    // Picture data
+    blockData.writeUInt32BE(imageBuffer.length, offset); offset += 4;
+    imageBuffer.copy(blockData, offset);
+
+    // Create the metadata block header
+    // Block type 6 = PICTURE, with last-metadata-block flag = 0
+    const header = Buffer.alloc(4);
+    header.writeUInt8(6, 0); // Block type 6 = PICTURE (not last block)
+    header.writeUInt8((blockData.length >> 16) & 0xFF, 1);
+    header.writeUInt8((blockData.length >> 8) & 0xFF, 2);
+    header.writeUInt8(blockData.length & 0xFF, 3);
+
+    return Buffer.concat([header, blockData]);
+}
+
+// ========================================
+// 🎨 WAV ID3 CHUNK BUILDER (ID3 in RIFF)
+// ========================================
+function createWavId3Chunk(imageBuffer: Buffer, filename: string): Buffer {
+    // Create ID3 tags
+    const tags: NodeID3.Tags = {
+        title: filename.replace(/\.[^/.]+$/, ""),
+        artist: "MUSIC MASTER DJ POOL",
+        album: "VIP MEMBER EXCLUSIVE",
+        year: new Date().getFullYear().toString(),
+        image: {
+            mime: "image/png",
+            type: { id: 3, name: "front cover" },
+            description: "Cover",
+            imageBuffer: imageBuffer
+        },
+        userDefinedText: [{ description: "WWW", value: "musicmasterpool.com" }]
+    };
+
+    const id3Buffer = NodeID3.create(tags);
+
+    // Create ID3 chunk for WAV (RIFF "id3 " chunk)
+    const chunkId = Buffer.from('id3 ', 'ascii');
+    const chunkSize = Buffer.alloc(4);
+    chunkSize.writeUInt32LE(id3Buffer.length, 0);
+
+    // Pad to even length if necessary
+    const padding = (id3Buffer.length % 2 === 1) ? Buffer.alloc(1, 0) : Buffer.alloc(0);
+
+    return Buffer.concat([chunkId, chunkSize, id3Buffer, padding]);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -67,69 +153,138 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const secureUrl = `https://${STORAGE_CONFIG.user}:${STORAGE_CONFIG.pass}@${STORAGE_CONFIG.host}${encodedPath}`;
 
     try {
-        const headers: Record<string, string> = {};
-        if (req.headers.range) {
-            headers['Range'] = req.headers.range as string;
-        }
-
-        const response = await axios({
-            method: 'get',
-            url: secureUrl,
-            responseType: 'stream',
-            headers: headers,
-            validateStatus: (status) => status >= 200 && status < 300
-        });
-
         const filename = basename(cleanPath);
-        const isMp3 = filename.toLowerCase().endsWith('.mp3');
+        const filenameLower = filename.toLowerCase();
+        const isMp3 = filenameLower.endsWith('.mp3');
+        const isFlac = filenameLower.endsWith('.flac');
+        const isWav = filenameLower.endsWith('.wav');
         const isDownload = download === 'true';
+        const canInject = BRAND_COVER_BUFFER && isDownload && (isMp3 || isFlac || isWav);
 
-        // 🚀 SMART INJECTION LOGIC
-        // Only inject for MP3 downloads IF we have the cover art ready
-        if (isDownload && isMp3 && BRAND_COVER_BUFFER) {
+        // For injection, we need the full file in memory
+        if (canInject) {
+            console.log(`🎨 Injecting cover art into: ${filename}`);
 
-            // 1. Create ID3 Tags
-            const tags: NodeID3.Tags = {
-                title: filename.replace(/\.[^/.]+$/, ""), // Remove extension
-                artist: "MUSIC MASTER DJ POOL",
-                album: "VIP MEMBER EXCLUSIVE",
-                year: new Date().getFullYear().toString(),
-                image: {
-                    mime: "image/png",
-                    type: {
-                        id: 3,
-                        name: "front cover"
-                    },
-                    description: "Cover",
-                    imageBuffer: BRAND_COVER_BUFFER
-                },
-                userDefinedText: [{
-                    description: "WWW",
-                    value: "musicmasterpool.com"
-                }]
-            };
-
-            // 2. Generate Tag Buffer (Synchronous, fast)
-            const tagBuffer = NodeID3.create(tags);
-
-            // 3. Calc new size
-            const originalSize = parseInt(response.headers['content-length'] || '0');
-            if (originalSize > 0) {
-                res.setHeader('Content-Length', originalSize + tagBuffer.length);
-            }
-
-            // 4. Set Download Headers
-            const encodedFilename = encodeURIComponent(filename);
-            res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"; filename*=UTF-8''${encodedFilename}`);
-            res.setHeader('Content-Type', 'audio/mpeg');
-
-            // 5. STREAM SPLICING: Write Tags -> Pipe Content
-            res.write(tagBuffer, () => {
-                response.data.pipe(res);
+            // Download the entire file for metadata injection
+            const response = await axios({
+                method: 'get',
+                url: secureUrl,
+                responseType: 'arraybuffer',
+                timeout: 120000, // 2 minutes for large files
+                validateStatus: (status) => status >= 200 && status < 300
             });
 
+            let audioBuffer = Buffer.from(response.data);
+            const encodedFilename = encodeURIComponent(filename);
+
+            // ========================================
+            // 🎵 MP3 INJECTION (Prepend ID3)
+            // ========================================
+            if (isMp3) {
+                const tags: NodeID3.Tags = {
+                    title: filename.replace(/\.[^/.]+$/, ""),
+                    artist: "MUSIC MASTER DJ POOL",
+                    album: "VIP MEMBER EXCLUSIVE",
+                    year: new Date().getFullYear().toString(),
+                    image: {
+                        mime: "image/png",
+                        type: { id: 3, name: "front cover" },
+                        description: "Cover",
+                        imageBuffer: BRAND_COVER_BUFFER!
+                    },
+                    userDefinedText: [{ description: "WWW", value: "musicmasterpool.com" }]
+                };
+
+                // Write tags directly to the buffer
+                audioBuffer = NodeID3.write(tags, audioBuffer) as Buffer;
+
+                res.setHeader('Content-Type', 'audio/mpeg');
+            }
+
+            // ========================================
+            // 🎵 FLAC INJECTION (Insert PICTURE block)
+            // ========================================
+            else if (isFlac) {
+                // FLAC structure: "fLaC" marker + metadata blocks + audio frames
+                // We'll insert our PICTURE block after the STREAMINFO block
+
+                const marker = audioBuffer.slice(0, 4).toString('ascii');
+                if (marker === 'fLaC') {
+                    const pictureBlock = createFlacPictureBlock(BRAND_COVER_BUFFER!);
+
+                    // Find the end of STREAMINFO (first metadata block, always 34 bytes after header)
+                    // STREAMINFO header (4 bytes) + STREAMINFO data (34 bytes) = position 42
+                    const streaminfoEnd = 4 + 4 + 34; // marker + block header + streaminfo data
+
+                    // Check if the first block is marked as last
+                    const firstBlockHeader = audioBuffer.readUInt8(4);
+                    const isLastBlock = (firstBlockHeader & 0x80) !== 0;
+
+                    if (isLastBlock) {
+                        // Clear the "last block" flag from STREAMINFO
+                        audioBuffer.writeUInt8(firstBlockHeader & 0x7F, 4);
+                        // Set our PICTURE block as the last block
+                        pictureBlock.writeUInt8(pictureBlock.readUInt8(0) | 0x80, 0);
+                    }
+
+                    // Insert the picture block after STREAMINFO
+                    audioBuffer = Buffer.concat([
+                        audioBuffer.slice(0, streaminfoEnd),
+                        pictureBlock,
+                        audioBuffer.slice(streaminfoEnd)
+                    ]);
+                }
+
+                res.setHeader('Content-Type', 'audio/flac');
+            }
+
+            // ========================================
+            // 🎵 WAV INJECTION (Append ID3 chunk)
+            // ========================================
+            else if (isWav) {
+                // WAV RIFF structure: "RIFF" + size + "WAVE" + chunks...
+                // We'll append an "id3 " chunk at the end and update the RIFF size
+
+                const riffMarker = audioBuffer.slice(0, 4).toString('ascii');
+                if (riffMarker === 'RIFF') {
+                    const id3Chunk = createWavId3Chunk(BRAND_COVER_BUFFER!, filename);
+
+                    // Update the RIFF size (at offset 4, little-endian)
+                    const currentRiffSize = audioBuffer.readUInt32LE(4);
+                    const newRiffSize = currentRiffSize + id3Chunk.length;
+
+                    // Write new size
+                    audioBuffer.writeUInt32LE(newRiffSize, 4);
+
+                    // Append ID3 chunk
+                    audioBuffer = Buffer.concat([audioBuffer, id3Chunk]);
+                }
+
+                res.setHeader('Content-Type', 'audio/wav');
+            }
+
+            // Send the modified file
+            res.setHeader('Content-Length', audioBuffer.length);
+            res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"; filename*=UTF-8''${encodedFilename}`);
+            res.send(audioBuffer);
+
         } else {
-            // STANDARD PASS-THROUGH (WAVs, Packs, or Streaming)
+            // ========================================
+            // 📁 STANDARD PASS-THROUGH (Streaming/Packs)
+            // ========================================
+            const headers: Record<string, string> = {};
+            if (req.headers.range) {
+                headers['Range'] = req.headers.range as string;
+            }
+
+            const response = await axios({
+                method: 'get',
+                url: secureUrl,
+                responseType: 'stream',
+                headers: headers,
+                validateStatus: (status) => status >= 200 && status < 300
+            });
+
             res.status(response.status);
 
             if (response.headers['content-range']) res.setHeader('Content-Range', response.headers['content-range']);
