@@ -99,9 +99,17 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, onPl
                       </div>
                       <div className="hidden md:block col-span-1">
                         {(() => {
-                          const filename = track.filename || track.file_path || '';
-                          const ext = filename.split('.').pop()?.toUpperCase() || 'MP3';
-                          const formatColors: Record<string, string> = { 'MP3': '#ff0055', 'WAV': '#00d4ff', 'FLAC': '#ffcc00', 'AIFF': '#9d00ff' };
+                          // Look for extension in multiple fields
+                          const sources = [track.title, track.filename, track.file_path, track.name].filter(Boolean);
+                          let ext = 'MP3'; // default
+                          for (const src of sources) {
+                            const match = src.match(/\.(mp3|wav|flac|aiff|aac|m4a|ogg|zip)$/i);
+                            if (match) {
+                              ext = match[1].toUpperCase();
+                              break;
+                            }
+                          }
+                          const formatColors: Record<string, string> = { 'MP3': '#ff0055', 'WAV': '#00d4ff', 'FLAC': '#ffcc00', 'AIFF': '#9d00ff', 'ZIP': '#00ff88' };
                           const formatColor = formatColors[ext] || '#ffffff';
                           return (
                             <span className="px-3 py-1 bg-white/5 border rounded-md text-[9px] font-black uppercase tracking-widest truncate block text-center" style={{ color: formatColor, borderColor: `${formatColor}33` }}>{ext}</span>
