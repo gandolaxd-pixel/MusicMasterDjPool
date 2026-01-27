@@ -34,16 +34,14 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (page === 1) setLastSearchTerm(term);
 
         try {
-            // ✅ Búsqueda directa en Supabase (tabla tracks)
+            // ✅ Búsqueda directa en Supabase (tabla dj_tracks)
             const { supabase } = await import('../supabase');
 
             // Usamos ilike para búsqueda insensible a mayúsculas
-            // IMPORTANTE: La tabla 'tracks' tiene columna 'title', no 'name' (según migración)
             const { data, error, count } = await supabase
-                .from('tracks') // Buscamos en la nueva tabla migrada
+                .from('dj_tracks') // Tabla principal con toda la música
                 .select('*', { count: 'exact' })
-                .ilike('title', `%${term}%`)
-                // .eq('format', 'file') // Eliminado porque nuestra tabla 'tracks' solo contiene archivos de música
+                .ilike('name', `%${term}%`)
                 .range((page - 1) * 50, page * 50 - 1); // Paginación de 50 en 50
 
             if (error) throw error;
