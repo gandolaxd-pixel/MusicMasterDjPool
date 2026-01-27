@@ -146,10 +146,13 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                     setFolderItems([]);
 
                     const folderPath = searchPrefix;
+                    // Determine pool_id based on current brand
+                    const poolId = brand === 'DJPACKS' ? 'DJPACKS' : 'BEATPORT';
+
                     const { data: tracks } = await supabase
                         .from('dj_tracks')
                         .select('*')
-                        .eq('pool_id', 'BEATPORT')
+                        .eq('pool_id', poolId)
                         .ilike('server_path', `${folderPath}%`)
                         .order('name');
                     // removed limit(500) to allow full folder listing if needed, or keep it if performance issue recurs.
