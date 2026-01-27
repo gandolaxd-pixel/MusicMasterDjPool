@@ -116,7 +116,11 @@ async function flushBatch(poolName) {
         };
     });
 
-    const { error } = await supabase.from('dj_tracks').insert(tracksToInsert);
+    // Use UPSERT to prevent duplicates (based on server_path)
+    const { error } = await supabase.from('dj_tracks').upsert(tracksToInsert, {
+        onConflict: 'server_path',
+        ignoreDuplicates: true
+    });
 
     if (error) {
         console.error(`\n❌ Error insertando lote: ${error.message}`);
