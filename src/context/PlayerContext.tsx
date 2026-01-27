@@ -20,8 +20,15 @@ interface PlayerContextType {
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    // Auth state
     const [user, setUser] = useState<any>(null);
     const [token, setToken] = useState<string | undefined>(undefined);
+
+    // Player state - CRITICAL: These were missing!
+    const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [queue, setQueue] = useState<Track[]>([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
 
     // Get Session Token for Audio Auth
     useEffect(() => {
