@@ -166,9 +166,9 @@ export function Navigation({ user, currentView, onSearch }: {
                     <Link to="/history" className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 rounded-lg uppercase tracking-widest transition-colors">
                       <History size={14} /> Download History
                     </Link>
-                    <button className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 rounded-lg uppercase tracking-widest transition-colors">
+                    <a href="https://t.me/+48g9AzurDo9jOTQx" target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 rounded-lg uppercase tracking-widest transition-colors">
                       <LifeBuoy size={14} /> Support
-                    </button>
+                    </a>
 
                     <div className="h-px bg-white/5 my-1" />
 
