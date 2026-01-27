@@ -1,0 +1,43 @@
+name: Auto Import DJ Packs
+
+on:
+  schedule:
+    # Runs every 2 days at 3:00 AM UTC
+    - cron: '0 3 */2 * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120 # 2 hours max
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env file
+        run: |
+          echo "VITE_SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}" >> .env
+          echo "HETZNER_USER=${{ secrets.HETZNER_USER }}" >> .env
+          echo "HETZNER_PASS=${{ secrets.HETZNER_PASS }}" >> .env
+          echo "HETZNER_HOST=${{ secrets.HETZNER_HOST }}" >> .env
+
+      - name: Import DJ Packs 2025
+        run: node scripts/import_universal.js DJPACKS/2025 DJPACKS
+        continue-on-error: true
+
+      - name: Import DJ Packs 2026
+        run: node scripts/import_universal.js DJPACKS/2026 DJPACKS
+        continue-on-error: true
+
+      - name: Rebuild Folder Index
+        run: node scripts/build_folder_index.js
