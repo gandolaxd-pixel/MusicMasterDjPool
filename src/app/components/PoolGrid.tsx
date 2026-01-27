@@ -12,14 +12,16 @@ interface SpecialNames {
 
 const PoolGrid: React.FC = () => {
     // Navigation State
-    const [view, setView] = useState<'brands' | 'years' | 'folders' | 'tracks'>('brands');
+    const [view, setView] = useState<'brands' | 'years' | 'months' | 'folders' | 'tracks'>('brands');
     const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
     const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null); // "Beatport 2025"
+    const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
     const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
 
     // Data State
     const [brandList, setBrandList] = useState<string[]>([]);
     const [yearList, setYearList] = useState<string[]>([]); // ["Beatport 2025", "Beatport 2026"]
+    const [monthList, setMonthList] = useState<string[]>([]);
     const [folderList, setFolderList] = useState<string[]>([]);
     const [trackList, setTrackList] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -106,36 +108,94 @@ const PoolGrid: React.FC = () => {
         }
     }, [view, selectedBrand]);
 
-    // 2. FETCH FOLDERS
+    // 2. FETCH MONTHS (New Level)
     useEffect(() => {
-        if (view === 'folders' && selectedPoolId) {
-            const fetchFolders = async () => {
+        if (view === 'months' && selectedPoolId) {
+            const fetchMonths = async () => {
                 setLoading(true);
+                // Fetch all original_folder values for this pool
                 const { data } = await supabase
                     .from('dj_tracks')
                     .select('original_folder')
                     .eq('pool_id', selectedPoolId);
 
                 if (data) {
-                    const uniqueFolders = Array.from(new Set(data.map(item => item.original_folder).filter(Boolean)));
-                    setFolderList(uniqueFolders.sort());
+                    // Extract Month part (Prefix before first slash)
+                    // Format: "DECEMBER/Folder Name"
+                    const months = new Set<string>();
+                    data.forEach(item => {
+                        if (item.original_folder) {
+                            const parts = item.original_folder.split('/');
+                            if (parts.length > 0 && parts[0]) {
+                                months.add(parts[0].toUpperCase());
+                            }
+                        }
+                    });
+
+                    // define month order
+                    const monthOrder: { [key: string]: number } = {
+                        'JANUARY': 1, 'FEBRUARY': 2, 'MARCH': 3, 'APRIL': 4, 'MAY': 5, 'JUNE': 6,
+                        'JULY': 7, 'AUGUST': 8, 'SEPTEMBER': 9, 'OCTOBER': 10, 'NOVEMBER': 11, 'DECEMBER': 12
+                    };
+
+                    const sortedMonths = Array.from(months).sort((a, b) => {
+                        const orderA = monthOrder[a] || 99;
+                        const orderB = monthOrder[b] || 99;
+                        if (orderA !== orderB) return orderA - orderB;
+                        return a.localeCompare(b);
+                    });
+
+                    setMonthList(sortedMonths);
+                }
+                setLoading(false);
+            };
+            fetchMonths();
+        }
+    }, [view, selectedPoolId]);
+
+    // 3. FETCH FOLDERS
+    useEffect(() => {
+        if (view === 'folders' && selectedPoolId && selectedMonth) {
+            const fetchFolders = async () => {
+                setLoading(true);
+                // Fetch folders starting with the selected month
+                const { data } = await supabase
+                    .from('dj_tracks')
+                    .select('original_folder')
+                    .eq('pool_id', selectedPoolId)
+                    .ilike('original_folder', `${selectedMonth}/%`); // Efficient prefix search
+
+                if (data) {
+                    const uniqueFolders = new Set<string>();
+                    data.forEach(item => {
+                        if (item.original_folder) {
+                            // Extract just the folder name part (after the month)
+                            // "DECEMBER/Folder Name" -> "Folder Name"
+                            const part = item.original_folder.substring(selectedMonth.length + 1); // +1 for slash
+                            if (part) uniqueFolders.add(part);
+                        }
+                    });
+                    setFolderList(Array.from(uniqueFolders).sort());
                 }
                 setLoading(false);
             };
             fetchFolders();
         }
-    }, [view, selectedPoolId]);
+    }, [view, selectedPoolId, selectedMonth]);
 
-    // 3. FETCH TRACKS
+    // 4. FETCH TRACKS
     useEffect(() => {
-        if (view === 'tracks' && selectedFolder && selectedPoolId) {
+        if (view === 'tracks' && selectedFolder && selectedPoolId && selectedMonth) {
             const fetchTracks = async () => {
                 setLoading(true);
+                // Reconstruct full original_folder path
+                const fullFolderPath = `${selectedMonth}/${selectedFolder}`;
+
                 const { data } = await supabase
                     .from('dj_tracks')
                     .select('*')
                     .eq('pool_id', selectedPoolId)
-                    .eq('original_folder', selectedFolder)
+                    .eq('original_folder', fullFolderPath)
                     .order('created_at', { ascending: false });
 
                 if (data) {
@@ -153,7 +213,7 @@ const PoolGrid: React.FC = () => {
             };
             fetchTracks();
         }
-    }, [view, selectedFolder, selectedPoolId]);
+    }, [view, selectedFolder, selectedPoolId, selectedMonth]);
 
     // --- NAVIGATION HANDLERS ---
 
@@ -164,7 +224,6 @@ const PoolGrid: React.FC = () => {
             setView('years');
         } else {
             // For now, default others to old 'dates' view or 'years' if strictly following new schema
-            // Since only Beatport has the new recursive structure guaranteed, let's try 'years' for all
             // If only 1 year exists (e.g. "Club Killers"), it works fine.
             setView('years');
         }
@@ -172,7 +231,8 @@ const PoolGrid: React.FC = () => {
 
     const handleBack = () => {
         if (view === 'tracks') setView('folders');
-        else if (view === 'folders') setView('years');
+        else if (view === 'folders') setView('months');
+        else if (view === 'months') setView('years');
         else if (view === 'years') setView('brands');
     };
 
@@ -232,7 +292,8 @@ const PoolGrid: React.FC = () => {
                 </button>
                 <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
                     {view === 'years' && <><span className="text-[#ff0055]">{selectedBrand}</span> Collections</>}
-                    {view === 'folders' && <><span className="text-[#ff0055]">{selectedPoolId}</span> Folders</>}
+                    {view === 'months' && <><span className="text-[#ff0055]">{selectedPoolId}</span> Archives</>}
+                    {view === 'folders' && <><span className="text-[#ff0055]">{selectedMonth}</span> Folders</>}
                     {view === 'tracks' && <><span className="text-[#ff0055]">{selectedFolder}</span> Tracks</>}
                 </h2>
             </div>
@@ -243,7 +304,7 @@ const PoolGrid: React.FC = () => {
                     {loading ? <div className="text-white">Loading identifiers...</div> : yearList.map((yearPool) => (
                         <button
                             key={yearPool}
-                            onClick={() => { setSelectedPoolId(yearPool); setView('folders'); }}
+                            onClick={() => { setSelectedPoolId(yearPool); setView('months'); }}
                             className="h-32 bg-[#111] border border-white/10 rounded-2xl flex flex-col items-center justify-center hover:bg-white/5 hover:border-[#ff0055] transition-all group"
                         >
                             <span className="text-2xl font-black text-white group-hover:text-[#ff0055] uppercase">{yearPool}</span>
@@ -254,12 +315,29 @@ const PoolGrid: React.FC = () => {
                 </div>
             )}
 
+            {/* MONTHS VIEW */}
+            {view === 'months' && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4">
+                    {loading ? <div className="text-white">Loading months...</div> : monthList.map((month) => (
+                        <button
+                            key={month}
+                            onClick={() => { setSelectedMonth(month); setView('folders'); }}
+                            className="p-8 bg-[#111] border border-white/10 rounded-2xl text-center hover:bg-white/5 hover:border-[#ff0055] transition-all group"
+                        >
+                            <span className="text-xl font-bold text-gray-300 group-hover:text-white group-hover:scale-110 block transition-transform">{month}</span>
+                        </button>
+                    ))}
+                    {!loading && monthList.length === 0 && <p className="text-gray-500">No months found (Running reorganization...).</p>}
+                </div>
+            )}
+
             {/* FOLDERS VIEW */}
             {view === 'folders' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4">
                     {loading ? <div className="text-white">Loading folders...</div> : folderList.map((folder) => {
                         // Clean folder name display
-                        const displayName = folder.replace(/^\/|\/$/g, '').split('/').pop() || folder;
+                        // The folder name is already cleaned by the fetchFolders logic
+                        const displayName = folder;
 
                         return (
                             <button
