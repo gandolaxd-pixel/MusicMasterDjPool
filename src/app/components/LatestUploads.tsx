@@ -22,8 +22,8 @@ interface LatestUploadsProps {
   loading?: boolean;
 }
 
-export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, onPlay, currentTrack, isPlaying, loading = false }: LatestUploadsProps) {
-  const { token } = usePlayer(); // Get secure token
+export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, currentTrack, isPlaying, loading = false }: LatestUploadsProps) {
+  const { token, playQueue } = usePlayer(); // Get secure token and playQueue for navigation
 
   const filteredTracks = useMemo(() => {
     if (!selectedGenre) return tracks;
@@ -65,7 +65,7 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, onPl
             // Render 10 skeletons while loading
             Array.from({ length: 15 }).map((_, i) => <TrackSkeleton key={i} />)
           ) : currentTracks.length > 0 ? (
-            currentTracks.map((track) => {
+            currentTracks.map((track, index) => {
               const title = track.title || track.filename;
               const artist = track.artist || 'Unknown Artist';
               const poolName = track.pool_origin || 'default';
@@ -78,9 +78,9 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, onPl
                 <div key={`track-${track.id}`} className={`group rounded-xl p-3 transition-all duration-300 ${isActive ? 'bg-white/10 border-l-4 shadow-[0_0_30px_rgba(0,0,0,0.5)] scale-[1.01]' : 'bg-[#0a0a0a] border-l-4 border-white/5 hover:bg-white/[0.03]'}`} style={{ borderLeftColor: isActive ? trackColor : `${trackColor}`, boxShadow: isActive ? `0 0 20px ${trackColor}20` : 'none' }}>
                   <div className="flex items-center gap-4">
 
-                    {/* Botón Play/Pausa */}
+                    {/* Botón Play/Pausa - Uses playQueue for prev/next navigation */}
                     <button
-                      onClick={() => onPlay(track)}
+                      onClick={() => playQueue(currentTracks, index)}
                       className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-transform shadow-lg cursor-pointer ${isActive ? 'scale-110' : 'hover:scale-110'}`}
                       style={{ backgroundColor: isActive ? '#fff' : '#ff0055' }}
                     >
