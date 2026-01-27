@@ -38,7 +38,7 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
     if (audioRef.current) audioRef.current.volume = isMuted ? 0 : volume;
   }, [volume, isMuted]);
 
-  // Handle Spacebar to Toggle Play/Pause
+  // Handle Keyboard Shortcuts for Audio Player
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing in a text-based input or textarea
@@ -50,15 +50,83 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
         return;
       }
 
-      if (e.code === 'Space') {
-        e.preventDefault(); // Prevent scrolling and default range interactions
-        onTogglePlay();
+      switch (e.code) {
+        // Space = Play/Pause
+        case 'Space':
+          e.preventDefault();
+          onTogglePlay();
+          break;
+
+        // Arrow Left = Previous Track
+        case 'ArrowLeft':
+          if (e.shiftKey) {
+            // Shift + Left = Seek back 10 seconds
+            if (audioRef.current) {
+              audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
+            }
+          } else {
+            e.preventDefault();
+            prevTrack();
+          }
+          break;
+
+        // Arrow Right = Next Track
+        case 'ArrowRight':
+          if (e.shiftKey) {
+            // Shift + Right = Seek forward 10 seconds
+            if (audioRef.current && duration) {
+              audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 10);
+            }
+          } else {
+            e.preventDefault();
+            nextTrack();
+          }
+          break;
+
+        // Arrow Up = Volume Up (+10%)
+        case 'ArrowUp':
+          e.preventDefault();
+          setVolume(prev => Math.min(1, prev + 0.1));
+          setIsMuted(false);
+          break;
+
+        // Arrow Down = Volume Down (-10%)
+        case 'ArrowDown':
+          e.preventDefault();
+          setVolume(prev => Math.max(0, prev - 0.1));
+          break;
+
+        // M = Mute/Unmute
+        case 'KeyM':
+          e.preventDefault();
+          setIsMuted(prev => !prev);
+          break;
+
+        // J = Seek backward 10 seconds
+        case 'KeyJ':
+          if (audioRef.current) {
+            audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
+          }
+          break;
+
+        // L = Seek forward 10 seconds
+        case 'KeyL':
+          if (audioRef.current && duration) {
+            audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 10);
+          }
+          break;
+
+        // K = Play/Pause (YouTube style)
+        case 'KeyK':
+          e.preventDefault();
+          onTogglePlay();
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onTogglePlay]);
+  }, [onTogglePlay, prevTrack, nextTrack, duration]);
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
