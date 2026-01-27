@@ -272,9 +272,12 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
         <div className="space-y-8 animate-in fade-in duration-500 pt-10 pb-20">
             {/* Breadcrumb Navigation */}
             <div className="flex items-center gap-2 px-4 overflow-x-auto py-2 border-b border-white/5 pb-6">
-                <button onClick={goHome} className="p-2 hover:bg-white/5 rounded-lg text-gray-500 transition-colors">
-                    <Home size={18} />
-                </button>
+                {/* Hide home button when using initialPool (no brands view to return to) */}
+                {!initialPool && (
+                    <button onClick={goHome} className="p-2 hover:bg-white/5 rounded-lg text-gray-500 transition-colors">
+                        <Home size={18} />
+                    </button>
+                )}
                 {path.map((p, i) => (
                     <div key={i} className="flex items-center gap-2 flex-shrink-0">
                         <ChevronRight size={14} className="text-gray-800" />
