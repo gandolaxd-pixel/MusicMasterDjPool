@@ -50,16 +50,17 @@ const AppContent = () => {
     const fetchInit = async () => {
       try {
         const { supabase } = await import('../../supabase');
-        // Intentamos cargar de 'dj_tracks' que parece ser la tabla principal de datos reales
-        const { data } = await supabase.from('dj_tracks').select('*').order('created_at', { ascending: false }).limit(200);
+        // Intentamos cargar de 'tracks' (tabla optimizada/migrada)
+        const { data } = await supabase.from('tracks').select('*').order('created_at', { ascending: false }).limit(200);
 
         if (data) {
           // Mapeamos los datos para que encajen con la interfaz Track que espera el frontend
           const mappedTracks: Track[] = data.map((item: any) => ({
             ...item,
-            pool_origin: item.pool_id || item.pool_origin || 'Unknown', // Adaptar pool_id a pool_origin
-            file_path: item.server_path || item.file_path, // Asegurar file_path
-            title: item.title || item.name, // Asegurar title
+            // Try to deduce pool from folder or default to Unknown
+            pool_origin: item.pool_origin || (item.folder ? item.folder.split('/')[2] : 'Unknown'),
+            file_path: item.file_path,
+            title: item.title,
           }));
           setRealTracks(mappedTracks);
         }
