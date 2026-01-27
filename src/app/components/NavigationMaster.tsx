@@ -84,10 +84,13 @@ export function Navigation({ user, currentView, onSearch }: {
 
         {/* 3. USER ACTIONS (Flex Initial - Right Align) */}
         <div className="flex items-center justify-end gap-4 z-20 w-[200px]">
-          {/* BUSCADOR */}
-          <div className="relative flex items-center" onMouseEnter={() => setIsSearchOpen(true)} onMouseLeave={() => { if (searchTerm === '') setIsSearchOpen(false); }}>
-            <motion.div animate={{ width: isSearchOpen ? 240 : 40 }} className={`flex items-center h-10 rounded-xl border ${isSearchOpen ? 'bg-white/5 border-white/20' : 'bg-transparent border-transparent'}`}>
-              <button onClick={triggerSearch} className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white"><Search size={18} /></button>
+          {/* BUSCADOR - Se expande hacia la izquierda */}
+          <div className="relative flex items-center justify-end" onMouseEnter={() => setIsSearchOpen(true)} onMouseLeave={() => { if (searchTerm === '') setIsSearchOpen(false); }}>
+            <motion.div
+              animate={{ width: isSearchOpen ? 240 : 40 }}
+              className={`absolute right-0 flex items-center h-10 rounded-xl border ${isSearchOpen ? 'bg-black/95 border-white/20 shadow-xl' : 'bg-transparent border-transparent'}`}
+            >
+              <button onClick={triggerSearch} className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white flex-shrink-0"><Search size={18} /></button>
               <AnimatePresence>
                 {isSearchOpen && (
                   <motion.input
@@ -100,6 +103,8 @@ export function Navigation({ user, currentView, onSearch }: {
                 )}
               </AnimatePresence>
             </motion.div>
+            {/* Spacer to keep layout stable */}
+            <div className="w-10 h-10" />
           </div>
 
           {/* USUARIO */}
