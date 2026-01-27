@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase';
-import { Disc, ArrowLeft, Folder } from 'lucide-react';
+import { Disc, ArrowLeft, Folder, LayoutGrid, List as ListIcon } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { useCrate } from '../../context/CrateContext';
 import { useAuth } from '../../context/AuthContext';
@@ -13,6 +13,7 @@ interface SpecialNames {
 const PoolGrid: React.FC = () => {
     // Navigation State
     const [view, setView] = useState<'brands' | 'years' | 'months' | 'folders' | 'tracks'>('brands');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
     const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null); // "Beatport 2025"
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -32,8 +33,8 @@ const PoolGrid: React.FC = () => {
     const { user } = useAuth();
 
     const specialNames: SpecialNames = {
-        "Beatport": "beatport.png", // Simplified Key
-        "Beatport New Releases": "beatport.png", // Legacy Key
+        "Beatport": "beatport.png",
+        "Beatport New Releases": "beatport.png",
         "Transitions": "Transitions.png",
         "Bootlegs": "bootleg.png",
         "Crate Connect": "crate-connect.png",
@@ -77,19 +78,16 @@ const PoolGrid: React.FC = () => {
     useEffect(() => {
         if (view === 'brands') {
             const allPools = Object.keys(specialNames).sort();
-            // Filter duplicates/legacy if needed, or just show unique keys
             const unique = Array.from(new Set(allPools));
             setBrandList(unique);
         }
     }, [view]);
 
-    // 1. FETCH YEARS (POOL_IDs)
+    // 1. FETCH YEARS
     useEffect(() => {
         if (view === 'years' && selectedBrand) {
             const fetchYears = async () => {
                 setLoading(true);
-                // Search for pools matching the brand (e.g. "Beatport%")
-                // If brand is "Beatport", look for "Beatport 2025", "Beatport 2026"
                 const searchTerm = selectedBrand.includes('Beatport') ? 'Beatport%' : `${selectedBrand}%`;
 
                 const { data } = await supabase
@@ -98,7 +96,6 @@ const PoolGrid: React.FC = () => {
                     .ilike('pool_id', searchTerm);
 
                 if (data) {
-                    // Extract unique pool_ids
                     const uniquePools = Array.from(new Set(data.map(item => item.pool_id).filter(Boolean)));
                     setYearList(uniquePools.sort().reverse());
                 }
@@ -108,20 +105,17 @@ const PoolGrid: React.FC = () => {
         }
     }, [view, selectedBrand]);
 
-    // 2. FETCH MONTHS (New Level)
+    // 2. FETCH MONTHS
     useEffect(() => {
         if (view === 'months' && selectedPoolId) {
             const fetchMonths = async () => {
                 setLoading(true);
-                // Fetch all original_folder values for this pool
                 const { data } = await supabase
                     .from('dj_tracks')
                     .select('original_folder')
                     .eq('pool_id', selectedPoolId);
 
                 if (data) {
-                    // Extract Month part (Prefix before first slash)
-                    // Format: "DECEMBER/Folder Name"
                     const months = new Set<string>();
                     data.forEach(item => {
                         if (item.original_folder) {
@@ -132,7 +126,6 @@ const PoolGrid: React.FC = () => {
                         }
                     });
 
-                    // define month order
                     const monthOrder: { [key: string]: number } = {
                         'JANUARY': 1, 'FEBRUARY': 2, 'MARCH': 3, 'APRIL': 4, 'MAY': 5, 'JUNE': 6,
                         'JULY': 7, 'AUGUST': 8, 'SEPTEMBER': 9, 'OCTOBER': 10, 'NOVEMBER': 11, 'DECEMBER': 12
@@ -158,20 +151,17 @@ const PoolGrid: React.FC = () => {
         if (view === 'folders' && selectedPoolId && selectedMonth) {
             const fetchFolders = async () => {
                 setLoading(true);
-                // Fetch folders starting with the selected month
                 const { data } = await supabase
                     .from('dj_tracks')
                     .select('original_folder')
                     .eq('pool_id', selectedPoolId)
-                    .ilike('original_folder', `${selectedMonth}/%`); // Efficient prefix search
+                    .ilike('original_folder', `${selectedMonth}/%`);
 
                 if (data) {
                     const uniqueFolders = new Set<string>();
                     data.forEach(item => {
                         if (item.original_folder) {
-                            // Extract just the folder name part (after the month)
-                            // "DECEMBER/Folder Name" -> "Folder Name"
-                            const part = item.original_folder.substring(selectedMonth.length + 1); // +1 for slash
+                            const part = item.original_folder.substring(selectedMonth.length + 1);
                             if (part) uniqueFolders.add(part);
                         }
                     });
@@ -188,7 +178,6 @@ const PoolGrid: React.FC = () => {
         if (view === 'tracks' && selectedFolder && selectedPoolId && selectedMonth) {
             const fetchTracks = async () => {
                 setLoading(true);
-                // Reconstruct full original_folder path
                 const fullFolderPath = `${selectedMonth}/${selectedFolder}`;
 
                 const { data } = await supabase
@@ -199,7 +188,6 @@ const PoolGrid: React.FC = () => {
                     .order('created_at', { ascending: false });
 
                 if (data) {
-                    // Normalize data
                     const mapped = data.map((item: any) => ({
                         ...item,
                         pool_origin: item.pool_id,
@@ -219,12 +207,9 @@ const PoolGrid: React.FC = () => {
 
     const handleBrandClick = (brand: string) => {
         setSelectedBrand(brand);
-        // Special logic for Beatport as requested
         if (brand.toLowerCase().includes('beatport')) {
             setView('years');
         } else {
-            // For now, default others to old 'dates' view or 'years' if strictly following new schema
-            // If only 1 year exists (e.g. "Club Killers"), it works fine.
             setView('years');
         }
     };
@@ -238,21 +223,70 @@ const PoolGrid: React.FC = () => {
 
     // --- RENDERERS ---
 
+    const ViewToggle = () => (
+        <div className="flex items-center gap-2 bg-[#111] p-1 rounded-lg border border-white/10">
+            <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-[#ff0055] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                title="Grid View"
+            >
+                <LayoutGrid size={16} />
+            </button>
+            <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-[#ff0055] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                title="List View"
+            >
+                <ListIcon size={16} />
+            </button>
+        </div>
+    );
+
     if (view === 'brands') {
         return (
             <div className="pt-10">
-                <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white mb-8 px-4">
-                    Select <span className="text-[#ff0055]">Pool</span>
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                <div className="flex justify-between items-end mb-8 px-4">
+                    <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">
+                        Select <span className="text-[#ff0055]">Pool</span>
+                    </h2>
+                    <ViewToggle />
+                </div>
+
+                <div className={viewMode === 'grid'
+                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6"
+                    : "flex flex-col gap-3 px-4"
+                }>
                     {brandList.map((name) => {
-                        // Skip legacy "Beatport New Releases" if "Beatport" exists to avoid duplicates, 
-                        // logic can be refined but simpler to just show what's in specialNames
-                        if (name === 'Beatport New Releases') return null; // Hide legacy key in favor of "Beatport"
+                        // Skip legacy "Beatport New Releases"
+                        if (name === 'Beatport New Releases') return null;
 
                         const imageName = specialNames[name] || `${name.toLowerCase().replace(/\s/g, '')}.png`;
                         const imagePath = `/pools/${imageName}`;
                         const isFullCover = name === "Bangerz Army";
+
+                        if (viewMode === 'list') {
+                            return (
+                                <button
+                                    key={name}
+                                    onClick={() => handleBrandClick(name)}
+                                    className="p-4 bg-[#111] border border-white/10 rounded-xl flex items-center gap-4 hover:bg-white/5 hover:border-[#ff0055] transition-all text-left group"
+                                >
+                                    <div className="w-12 h-12 bg-black rounded-lg p-2 flex items-center justify-center border border-white/5">
+                                        <img
+                                            src={imagePath}
+                                            alt={name}
+                                            className="w-full h-full object-contain opacity-70 group-hover:opacity-100 transition-opacity"
+                                            onError={(e) => {
+                                                (e.target as HTMLElement).style.display = 'none';
+                                                ((e.target as HTMLElement).nextElementSibling as HTMLElement).style.display = 'block';
+                                            }}
+                                        />
+                                        <Disc size={20} className="hidden text-[#ff0055]" />
+                                    </div>
+                                    <span className="text-lg font-bold text-gray-300 group-hover:text-white transition-colors">{name}</span>
+                                </button>
+                            );
+                        }
 
                         return (
                             <button
@@ -286,29 +320,38 @@ const PoolGrid: React.FC = () => {
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pt-10 pb-20">
             {/* Common Header for Inner Views */}
-            <div className="flex items-center gap-4 px-4">
-                <button onClick={handleBack} className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl">
-                    <ArrowLeft size={20} className="group-hover:scale-110 text-white" />
-                </button>
-                <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
-                    {view === 'years' && <><span className="text-[#ff0055]">{selectedBrand}</span> Collections</>}
-                    {view === 'months' && <><span className="text-[#ff0055]">{selectedPoolId}</span> Archives</>}
-                    {view === 'folders' && <><span className="text-[#ff0055]">{selectedMonth}</span> Folders</>}
-                    {view === 'tracks' && <><span className="text-[#ff0055]">{selectedFolder}</span> Tracks</>}
-                </h2>
+            <div className="flex items-center justify-between gap-4 px-4">
+                <div className="flex items-center gap-4">
+                    <button onClick={handleBack} className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl">
+                        <ArrowLeft size={20} className="group-hover:scale-110 text-white" />
+                    </button>
+                    <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
+                        {view === 'years' && <><span className="text-[#ff0055]">{selectedBrand}</span> Collections</>}
+                        {view === 'months' && <><span className="text-[#ff0055]">{selectedPoolId}</span> Archives</>}
+                        {view === 'folders' && <><span className="text-[#ff0055]">{selectedMonth}</span> Folders</>}
+                        {view === 'tracks' && <><span className="text-[#ff0055]">{selectedFolder}</span> Tracks</>}
+                    </h2>
+                </div>
+                {view !== 'tracks' && <ViewToggle />}
             </div>
 
             {/* YEARS VIEW */}
             {view === 'years' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4">
+                <div className={viewMode === 'grid'
+                    ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4"
+                    : "flex flex-col gap-3 px-4"
+                }>
                     {loading ? <div className="text-white">Loading identifiers...</div> : yearList.map((yearPool) => (
                         <button
                             key={yearPool}
                             onClick={() => { setSelectedPoolId(yearPool); setView('months'); }}
-                            className="h-32 bg-[#111] border border-white/10 rounded-2xl flex flex-col items-center justify-center hover:bg-white/5 hover:border-[#ff0055] transition-all group"
+                            className={viewMode === 'grid'
+                                ? "h-32 bg-[#111] border border-white/10 rounded-2xl flex flex-col items-center justify-center hover:bg-white/5 hover:border-[#ff0055] transition-all group"
+                                : "p-4 bg-[#111] border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/5 hover:border-[#ff0055] transition-all group"
+                            }
                         >
-                            <span className="text-2xl font-black text-white group-hover:text-[#ff0055] uppercase">{yearPool}</span>
-                            <span className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-2">{yearPool.includes('20') ? 'Annual Collection' : 'Pool Archive'}</span>
+                            <span className={`${viewMode === 'grid' ? 'text-2xl' : 'text-lg'} font-black text-white group-hover:text-[#ff0055] uppercase`}>{yearPool}</span>
+                            <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">{yearPool.includes('20') ? 'Annual Collection' : 'Pool Archive'}</span>
                         </button>
                     ))}
                     {!loading && yearList.length === 0 && <p className="text-gray-500">No collections found.</p>}
@@ -317,14 +360,21 @@ const PoolGrid: React.FC = () => {
 
             {/* MONTHS VIEW */}
             {view === 'months' && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4">
+                <div className={viewMode === 'grid'
+                    ? "grid grid-cols-2 md:grid-cols-4 gap-4 px-4"
+                    : "flex flex-col gap-3 px-4"
+                }>
                     {loading ? <div className="text-white">Loading months...</div> : monthList.map((month) => (
                         <button
                             key={month}
                             onClick={() => { setSelectedMonth(month); setView('folders'); }}
-                            className="p-8 bg-[#111] border border-white/10 rounded-2xl text-center hover:bg-white/5 hover:border-[#ff0055] transition-all group"
+                            className={viewMode === 'grid'
+                                ? "p-8 bg-[#111] border border-white/10 rounded-2xl text-center hover:bg-white/5 hover:border-[#ff0055] transition-all group"
+                                : "p-4 bg-[#111] border border-white/10 rounded-xl flex items-center gap-4 hover:bg-white/5 hover:border-[#ff0055] transition-all text-left group"
+                            }
                         >
-                            <span className="text-xl font-bold text-gray-300 group-hover:text-white group-hover:scale-110 block transition-transform">{month}</span>
+                            {viewMode === 'list' && <span className="p-2 bg-white/5 rounded-md text-gray-500"><Folder size={16} /></span>}
+                            <span className={`${viewMode === 'grid' ? 'text-xl' : 'text-lg'} font-bold text-gray-300 group-hover:text-white ${viewMode === 'grid' ? 'group-hover:scale-110 block transition-transform' : ''}`}>{month}</span>
                         </button>
                     ))}
                     {!loading && monthList.length === 0 && <p className="text-gray-500">No months found (Running reorganization...).</p>}
@@ -333,24 +383,24 @@ const PoolGrid: React.FC = () => {
 
             {/* FOLDERS VIEW */}
             {view === 'folders' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4">
+                <div className={viewMode === 'grid'
+                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 px-4"
+                    : "flex flex-col gap-3 px-4"
+                }>
                     {loading ? <div className="text-white">Loading folders...</div> : folderList.map((folder) => {
-                        // Clean folder name display
-                        // The folder name is already cleaned by the fetchFolders logic
                         const displayName = folder;
-
                         return (
                             <button
                                 key={folder}
                                 onClick={() => { setSelectedFolder(folder); setView('tracks'); }}
-                                className="p-6 bg-[#111] border border-white/10 rounded-xl flex items-center gap-4 hover:bg-white/5 hover:border-[#ff0055] transition-all text-left group"
+                                className={`p-6 bg-[#111] border border-white/10 rounded-xl flex items-center gap-4 hover:bg-white/5 hover:border-[#ff0055] transition-all text-left group ${viewMode === 'list' ? 'py-4' : ''}`}
                             >
                                 <div className="p-3 bg-white/5 rounded-lg text-gray-400 group-hover:text-[#ff0055] group-hover:bg-[#ff0055]/10">
                                     <Folder size={24} />
                                 </div>
                                 <div className="min-w-0">
                                     <h3 className="font-bold text-white truncate group-hover:text-[#ff0055] transition-colors">{displayName}</h3>
-                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">{selectedPoolId}</p>
+                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">{selectedMonth}</p>
                                 </div>
                             </button>
                         );
