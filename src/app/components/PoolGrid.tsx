@@ -91,12 +91,10 @@ const PoolGrid: React.FC = () => {
 
                 let searchPrefix = '';
                 if (brand === 'Beatport') {
-                    // For Beatport, search in server_path starting with /BEATPORT2025/
-                    if (path.length === 1) {
-                        searchPrefix = '/BEATPORT2025/';
-                    } else {
-                        searchPrefix = '/' + path.slice(1).join('/') + '/';
-                    }
+                    // Always start with /BEATPORT2025/ for this brand
+                    const root = 'BEATPORT2025';
+                    const subPath = path.slice(1).join('/');
+                    searchPrefix = `/${root}/${subPath ? subPath + '/' : ''}`;
                 }
 
                 const { data } = await supabase
