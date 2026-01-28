@@ -15,9 +15,10 @@ interface HomePageProps {
     user: any;
     featuredPack?: any; // Nuevo prop para el pack destacado
     loading?: boolean;
+    dataError?: string | null;
 }
 
-export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGenre, onGenreSelect, featuredPack, loading }) => {
+export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGenre, onGenreSelect, featuredPack, loading, dataError }) => {
     const { playTrack, playQueue, currentTrack, isPlaying } = usePlayer();
     const { crate, toggleCrate } = useCrate();
 
@@ -31,13 +32,13 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                 // Total tracks count
                 const { count: totalCount } = await supabase
                     .from('dj_tracks')
-                    .select('*', { count: 'exact', head: true });
+                    .select('*', { count: 'estimated', head: true });
 
                 // Tracks added today
                 const today = new Date().toISOString().split('T')[0];
                 const { count: todayCount } = await supabase
                     .from('dj_tracks')
-                    .select('*', { count: 'exact', head: true })
+                    .select('*', { count: 'estimated', head: true })
                     .gte('created_at', today);
 
                 // Last update time
@@ -64,6 +65,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                     addedToday: todayCount || 0,
                     lastUpdate: lastUpdateStr
                 });
+                setStatsError(null);
             } catch (error) {
                 console.error('Error fetching stats:', error);
                 setStatsError('No se pudieron cargar las estadísticas en este momento.');
@@ -86,7 +88,9 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
     const handlePlayPack = async () => {
         if (!featuredPack) {
             // Fallback default behavior
-            playTrack(realTracks[0]);
+            if (realTracks[0]) {
+                playTrack(realTracks[0]);
+            }
             return;
         }
 
@@ -177,6 +181,11 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
 
                 {/* D. DATA LIST (Pro Utility) */}
                 <section id="latest">
+                    {dataError && (
+                        <div className="mb-6 text-[10px] uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                            {dataError}
+                        </div>
+                    )}
                     <LatestUploads
                         tracks={realTracks.slice(0, 50)}
                         selectedGenre={selectedGenre}
@@ -187,6 +196,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                         onPlay={playTrack}
                         currentTrack={currentTrack}
                         isPlaying={isPlaying}
+                        loading={!!loading}
                     />
                 </section>
             </div>

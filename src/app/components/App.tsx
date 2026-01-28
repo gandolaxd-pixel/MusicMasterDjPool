@@ -40,6 +40,7 @@ const AppContent = () => {
   const [realTracks, setRealTracks] = useState<Track[]>([]);
   const [featuredPack, setFeaturedPack] = useState<any>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   const handleGenreSelect = (genreName: string | null) => {
     setSelectedGenre(prev => prev === genreName ? null : genreName);
@@ -49,9 +50,14 @@ const AppContent = () => {
   useEffect(() => {
     const fetchInit = async () => {
       try {
+        setDataError(null);
         const { supabase } = await import('../../supabase');
         // Intentamos cargar de 'dj_tracks' (tabla viva con Beatport 2026/2025)
-        const { data } = await supabase.from('dj_tracks').select('*').order('created_at', { ascending: false }).limit(200);
+        const { data } = await supabase
+          .from('dj_tracks')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(0, 49);
 
         if (data) {
           // Mapeamos los datos para que encajen con la interfaz Track que espera el frontend
@@ -90,6 +96,7 @@ const AppContent = () => {
         }
       } catch (e) {
         console.error("Error fetching data", e);
+        setDataError('No se pudo cargar tu música. Intenta recargar.');
       } finally {
         setDataLoading(false);
       }
@@ -129,13 +136,14 @@ const AppContent = () => {
           <Route path="/" element={<RootLayout />}>
 
             <Route index element={
-              <HomePage
+            <HomePage
                 realTracks={realTracks}
                 selectedGenre={selectedGenre}
                 onGenreSelect={handleGenreSelect}
                 user={user}
                 featuredPack={featuredPack}
                 loading={dataLoading}
+              dataError={dataError}
               />}
             />
 
