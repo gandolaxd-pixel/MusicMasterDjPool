@@ -214,7 +214,14 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                     const subPath = path.slice(1).join('/');
                     searchPrefix = `/${subPath ? subPath + '/' : ''}`;
                 } else if (brand === 'DJPACKS') {
-                    searchPrefix = `/${path.join('/')}`;
+                    // Custom mapping for SOUTH AMERICA
+                    if (path.includes('SOUTH AMERICA DJ PACKS')) {
+                        const relativePath = path.slice(path.indexOf('SOUTH AMERICA DJ PACKS') + 1).join('/');
+                        searchPrefix = `/REMIXEN/${relativePath}`;
+                        searchPrefix = searchPrefix.replace(/\/+$/, '') + '/'; // ensure trailing slash for prefix logic
+                    } else {
+                        searchPrefix = `/${path.join('/')}`;
+                    }
                 } else {
                     searchPrefix = `/${path.join('/')}`;
                 }
@@ -237,6 +244,11 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
 
                 if (cachedFolders && cachedFolders.length > 0) {
                     cachedFolders.forEach(f => folderSet.add(f.name));
+                }
+
+                // INJECT CUSTOM FOLDER FOR DJPACKS ROOT
+                if (brand === 'DJPACKS' && path.length === 1) { // path is just ['DJPACKS']
+                    folderSet.add('SOUTH AMERICA DJ PACKS');
                 }
 
                 // 2. Sort folders
@@ -265,7 +277,13 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                     const folderPath = searchPrefix;
                     // Determine pool_id based on current brand
                     let poolId = 'BEATPORT'; // Default
-                    if (brand === 'DJPACKS') poolId = 'DJPACKS';
+                    if (brand === 'DJPACKS') {
+                        if (path.includes('SOUTH AMERICA DJ PACKS')) {
+                            poolId = 'SOUTH AMERICA';
+                        } else {
+                            poolId = 'DJPACKS';
+                        }
+                    }
                     else if (brand === 'BEATPORT') poolId = 'BEATPORT';
                     else poolId = brand; // For all other pools (Club Killers, Acapellas, etc.)
 
