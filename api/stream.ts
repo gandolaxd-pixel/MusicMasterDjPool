@@ -245,7 +245,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const secureUrl = `https://${STORAGE_CONFIG.user}:${STORAGE_CONFIG.pass}@${STORAGE_CONFIG.host}${encodedPath}`;
 
     try {
-        const filename = basename(cleanPath);
+        const filename = decodeURIComponent(basename(cleanPath));
         const filenameLower = filename.toLowerCase();
         const isMp3 = filenameLower.endsWith('.mp3');
         const isFlac = filenameLower.endsWith('.flac');
