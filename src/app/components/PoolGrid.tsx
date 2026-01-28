@@ -74,7 +74,28 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
         // New mappings for new icons
         "Bootlegs": "bootleg.png",
         "Promo Only": "promo-only.png",
-        "Spinback Promos": "spinback-promos.png"
+        "Spinback Promos": "spinback-promos.png",
+        // Comprehensive list of all active pools
+        "Acapellas": "acapellas.png",
+        "All In One": "allinone.png",
+        "America Remix": "americaremix.png",
+        "BarBangerz": "barbangerz.png",
+        "Beatfreakz": "beatfreakz.png",
+        "California Remix": "californiaremix.png",
+        "Da Zone": "dazone.png",
+        "Doing The Damage": "doingthedamage.png",
+        "Europa Remix": "europaremix.png",
+        "Extended Latino": "extendedlatino.png",
+        "Instrumentals": "instrumentals.png",
+        "Intensa": "intensa.png",
+        "Jestei Pool": "jesteipool.png",
+        "Just Play": "justplay.png",
+        "Latin Box": "latinbox.png",
+        "Mixinit": "mixinit.png",
+        "PLR": "plr.png",
+        "RunderGround": "runderground.png",
+        "Xtendamix": "xtendamix.png",
+        "ZipDJ": "zipdj.png"
     };
 
     // Load brands on mount (skip if initialPool is set)
