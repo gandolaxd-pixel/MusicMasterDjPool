@@ -15,7 +15,7 @@ type Props = {
 
 export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Props) {
   const { user } = useAuth();
-  const { currentTrack, nextTrack, prevTrack } = usePlayer();
+  const { currentTrack, nextTrack, prevTrack, token } = usePlayer();
   const audioRef = useRef<HTMLAudioElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
@@ -248,7 +248,7 @@ export function AudioPlayer({ url, title, artist, isPlaying, onTogglePlay }: Pro
 
             <motion.a
               whileHover={{ scale: 1.05 }}
-              href={currentTrack ? getTrackUrl(currentTrack, true) : '#'}
+              href={currentTrack ? getTrackUrl(currentTrack, true, token) : '#'}
               download
               target="_self"
               onClick={async () => {
