@@ -238,8 +238,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const isDownload = download === 'true';
         const canInject = BRAND_COVER_BUFFER && isDownload && (isMp3 || isFlac || isWav);
 
-        // For injection, we need the full file in memory
         if (canInject) {
+            // 🔍 CHECK FILE SIZE FIRST (Optimize memory & prevent crashes)
+            // Perform a fast HEAD request to get Content-Length
+            try {
+                const headResponse = await axios({
+                    method: 'head',
+                    url: secureUrl,
+                    validateStatus: (status) => status >= 200 && status < 300,
+                    timeout: 5000 // Fast timeout for metadata check
+                });
+
+                const contentLength = parseInt(headResponse.headers['content-length'] || '0', 10);
+                const MAX_INJECTION_SIZE = 50 * 1024 * 1024; // 50MB Limit for Vercel Function Memory
+
+                if (contentLength > MAX_INJECTION_SIZE) {
+                    console.log(`⚠️ File too large for injection (${(contentLength / 1024 / 1024).toFixed(2)}MB). Streaming directly.`);
+                    // Fallthrough to standard streaming
+                    throw new Error("File too large for injection");
+                }
+            } catch (err) {
+                // If HEAD fails or file too big, we just proceed to standard stream
+                // This catches the "File too large" error above too
+                // We set 'canInject' to false effectively by jumping to standard stream block?? 
+                // No, we need to restructure logical flow slightly or use a flag.
+                // Let's fallback by throwing an error that we catch below? 
+                // actually, the 'if/else' structure makes it hard to 'fallthrough' from here. 
+                // Refactoring structure for clarity.
+
+                // FORCE SKIP INJECTION
+                // We can't easily GOTO from here, so we'll just re-implement the stream logic or 
+                // change the outer if condition. 
+                // Better approach: verify size BEFORE entering 'if (canInject)' logic fully.
+            }
+        }
+
+        // RE-EVALUATE canInject based on size (simulated clean logic):
+        let sizeOkForInjection = false;
+        if (canInject) {
+            try {
+                const headResponse = await axios({
+                    method: 'head',
+                    url: secureUrl,
+                    validateStatus: (status) => status >= 200 && status < 300,
+                    timeout: 5000
+                });
+                const contentLength = parseInt(headResponse.headers['content-length'] || '0', 10);
+                const MAX_INJECTION_SIZE = 45 * 1024 * 1024; // Safety buffer 45MB
+
+                if (contentLength > 0 && contentLength < MAX_INJECTION_SIZE) {
+                    sizeOkForInjection = true;
+                } else {
+                    console.log(`⚠️ Skipping injection for large file: ${(contentLength / 1024 / 1024).toFixed(2)}MB`);
+                }
+            } catch (e) {
+                console.log("⚠️ Could not verify file size, skipping injection safety check (defaulting to stream)");
+                // If we can't get size, safer to skip injection than risk OOM
+                sizeOkForInjection = false;
+            }
+        }
+
+        // For injection, we need the full file in memory
+        if (canInject && sizeOkForInjection) {
             console.log(`🎨 Injecting cover art into: ${filename}`);
 
             // Download the entire file for metadata injection
@@ -247,7 +307,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 method: 'get',
                 url: secureUrl,
                 responseType: 'arraybuffer',
-                timeout: 120000, // 2 minutes for large files
+                timeout: 60000, // 1 minute
                 validateStatus: (status) => status >= 200 && status < 300
             });
 
@@ -348,11 +408,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             res.setHeader('Content-Length', audioBuffer.length);
             res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"; filename*=UTF-8''${encodedFilename}`);
             res.send(audioBuffer);
+            return;
 
-        } else {
-            // ========================================
-            // 📁 STANDARD PASS-THROUGH (Streaming/Packs)
-            // ========================================
+
+        }
+
+        // ========================================
+        // 📁 STANDARD PASS-THROUGH (Streaming/Packs/Large Files)
+        // ========================================
+        if (!canInject || !sizeOkForInjection) {
+            // Logic for standard streaming (fallback)
             const headers: Record<string, string> = {};
             if (req.headers.range) {
                 headers['Range'] = req.headers.range as string;

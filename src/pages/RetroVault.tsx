@@ -1,5 +1,5 @@
 import React from 'react';
-import { PoolGrid } from '../app/components/PoolGrid';
+import PoolGrid from '../app/components/PoolGrid';
 import { Disc } from 'lucide-react';
 
 interface RetroVaultProps {
@@ -7,7 +7,7 @@ interface RetroVaultProps {
     user: any;
 }
 
-export const RetroVault: React.FC<RetroVaultProps> = ({ realTracks, user }) => {
+export const RetroVault: React.FC<RetroVaultProps> = () => {
     return (
         <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-20">
             {/* Header */}

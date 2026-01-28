@@ -6,9 +6,7 @@ import { useCrate } from '../../context/CrateContext';
 import { useAuth } from '../../context/AuthContext';
 import { LatestUploads } from './LatestUploads';
 
-interface SpecialNames {
-    [key: string]: string;
-}
+import { SPECIAL_NAMES, MONTH_MAP } from '../../constants/poolData';
 
 interface PoolGridProps {
     initialPool?: string;
@@ -31,73 +29,6 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
     const { crate, toggleCrate } = useCrate();
     const { user } = useAuth();
 
-    const specialNames: SpecialNames = {
-        "Beatport": "beatport.png",
-        "Beatport New Releases": "beatport.png",
-        "Transitions": "Transitions.png",
-        "Bootlegs": "bootleg.png",
-        "Crate Connect": "crate-connect.png",
-        "Cuba Remix": "cubaremixes.png",
-        "Redrums": "redrum.png",
-        "Spin Back Promos": "spinback-promos.png",
-        "Bangerz Army": "bangerzarmy.png",
-        "Crack 4 DJs": "Crack4DJS.png",
-        "Da Throwbackz": "Throwbacks.png",
-        "FRP": "FRP.png",
-        "HMC": "HMC.png",
-        "Kuts": "KUTS.png",
-        "MMP": "MMP.png",
-        "Platinum Pool": "POOL_Platinum.png",
-        "Traxsource New Releases": "traxsource.png",
-        "Unlimited Latin": "UnlimitedLatin.png",
-        "Latin Throwback": "latin throwback.png",
-        "Latin Remixes": "latinremixes.png",
-        "Cuban Pool": "Cuban-Pool.png",
-        "Dale Mas Bajo": "Dale-Mas-Bajo.png",
-        "Elite Remix": "Elite-Remix.png",
-        "BPM Supreme": "bpmsupreme.png",
-        "DJ City": "djcity.png",
-        "8th Wonder": "8thwonder.png",
-        "Beat Junkies": "beatjunkies.png",
-        "BPM Latino": "bpmlatino.png",
-        "Club Killers": "clubkillers.png",
-        "Crooklyn Clan": "crooklynclan.png",
-        "Digital DJ Pool": "ddp.png",
-        "DMS": "dms.png",
-        "Direct Music Service": "dms.png",
-        "Heavy Hits": "heavyhits.png",
-        "Hyperz": "hyperz.png",
-        "My Mp3 Pool": "mymp3pool.png",
-        "Remix Planet": "remixplanet.png",
-        "The Mash Up": "themashup.png",
-        "DMP": "dmp.png",
-        // New mappings for new icons
-        // "Bootlegs": "bootleg.png", // Duplicate removed (merged below)
-        "Promo Only": "promo-only.png",
-        "Spinback Promos": "spinback-promos.png",
-        // Comprehensive list of all active pools
-        "Acapellas": "acapellas.png",
-        "All In One": "allinone.png",
-        "America Remix": "americaremix.png",
-        "BarBangerz": "barbangerz.png",
-        "Beatfreakz": "beatfreakz.png",
-        "California Remix": "californiaremix.png",
-        "Da Zone": "dazone.png",
-        "Doing The Damage": "doing-the-damage-dtm.png",
-        "Europa Remix": "europaremix.png",
-        "Extended Latino": "Extended-Latino.png",
-        "Instrumentals": "instrumentals.png",
-        "Intensa": "Intensa.png",
-        "Jestei Pool": "Jestei-Pool.png",
-        "Just Play": "justplay.png",
-        "Latin Box": "Latin-Box.png",
-        "Mixinit": "mixinit.png",
-        "PLR": "PLR.png",
-        "RunderGround": "RunderGround.png",
-        "Xtendamix": "xtendamix.png",
-        "ZipDJ": "zipdj.png"
-    };
-
     // Load brands on mount (skip if initialPool is set)
     useEffect(() => {
         if (overridePoolId === 'RETRO_VAULT') {
@@ -116,7 +47,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
         }
 
         if (!initialPool && currentLevel === 'brands') {
-            const allPools = Object.keys(specialNames).sort();
+            const allPools = Object.keys(SPECIAL_NAMES).sort();
             const unique = Array.from(new Set(allPools));
             setBrandList(unique);
         }
@@ -163,9 +94,8 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                             .order('drop_month'); // Sorting might need manual helper
 
                         if (data) {
-                            const monthMap: { [key: string]: number } = { 'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6, 'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12 };
                             const uniqueMonths = Array.from(new Set(data.filter(d => d.drop_month).map(d => d.drop_month)))
-                                .sort((a, b) => (monthMap[a] || 99) - (monthMap[b] || 99));
+                                .sort((a, b) => (MONTH_MAP[a] || 99) - (MONTH_MAP[b] || 99));
                             setFolderItems(uniqueMonths);
                             setTrackList([]);
                         }
@@ -426,7 +356,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                     {brandList.map((name) => {
                         if (name === 'Beatport New Releases') return null;
 
-                        const imageName = specialNames[name] || `${name.toLowerCase().replace(/\s/g, '')}.png`;
+                        const imageName = SPECIAL_NAMES[name] || `${name.toLowerCase().replace(/\s/g, '')}.png`;
                         const imagePath = `/pools/${imageName}`;
                         const isFullCover = name === "Bangerz Army";
 
