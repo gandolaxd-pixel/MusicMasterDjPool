@@ -2,10 +2,7 @@ import React from 'react';
 import PoolGrid from '../app/components/PoolGrid';
 import { Disc } from 'lucide-react';
 
-interface RetroVaultProps {
-    realTracks: any[];
-    user: any;
-}
+interface RetroVaultProps { }
 
 export const RetroVault: React.FC<RetroVaultProps> = () => {
     return (
