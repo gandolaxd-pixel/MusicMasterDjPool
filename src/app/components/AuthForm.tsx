@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabase';
 import { Mail, Lock, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface AuthFormProps {
   selectedPlan?: string | null;
@@ -47,12 +48,15 @@ export function AuthForm({ selectedPlan }: AuthFormProps) {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         setMessage({ type: 'success', text: 'Revisa tu email para confirmar el registro.' });
+        toast.success('Registro enviado. Revisa tu email.');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        toast.success('Bienvenido de vuelta.');
       }
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Ocurrió un error. Intenta nuevamente.' });
+      toast.error(error.message || 'No se pudo completar la autenticación.');
     } finally {
       setLoading(false);
     }
@@ -116,8 +120,8 @@ export function AuthForm({ selectedPlan }: AuthFormProps) {
 
         <button
           type="submit"
-          disabled={loading}
-          className="w-full bg-[#ff0055] hover:bg-[#e6004d] text-white font-black uppercase tracking-[0.2em] py-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,0,85,0.3)] disabled:opacity-50"
+          disabled={loading || !isFormValid}
+          className="w-full bg-[#ff0055] hover:bg-[#e6004d] text-white font-black uppercase tracking-[0.2em] py-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,0,85,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? <Loader2 className="animate-spin" size={18} /> : (isRegistering ? 'Create Account' : 'Access Server')}
         </button>
