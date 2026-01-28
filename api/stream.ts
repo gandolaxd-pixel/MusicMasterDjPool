@@ -226,7 +226,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     let cleanPath = trackPath.startsWith('/') ? trackPath : '/' + trackPath;
-    const encodedPath = cleanPath.split('/').map(segment => encodeURIComponent(segment)).join('/');
+    const encodedPath = cleanPath.split('/').map(segment => encodeURIComponent(decodeURIComponent(segment))).join('/');
     const secureUrl = `https://${STORAGE_CONFIG.user}:${STORAGE_CONFIG.pass}@${STORAGE_CONFIG.host}${encodedPath}`;
 
     try {

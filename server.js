@@ -197,7 +197,9 @@ app.get('/api/stream', requireAuth, async (req, res, next) => {
         return res.status(403).json({ error: 'Invalid path' });
     }
 
-    let encodedPath = trackPath.split('/').map(encodeURIComponent).join('/');
+    // Fix: Decode first to ensure we don't double-encode (e.g. %20 -> %2520)
+    // This safely handles both raw spaces and already-encoded %20 from DB
+    let encodedPath = trackPath.split('/').map(p => encodeURIComponent(decodeURIComponent(p))).join('/');
     if (!encodedPath.startsWith('/')) encodedPath = '/' + encodedPath;
 
     const secureUrl = `https://${STORAGE_CONFIG.user}:${STORAGE_CONFIG.pass}@${STORAGE_CONFIG.host}${encodedPath}`;
