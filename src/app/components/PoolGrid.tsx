@@ -69,10 +69,9 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
         "My Mp3 Pool": "mymp3pool.png",
         "Remix Planet": "remixplanet.png",
         "The Mash Up": "themashup.png",
-        "Are You Kiddy": "areyoukidy.png",
         "DMP": "dmp.png",
         // New mappings for new icons
-        "Bootlegs": "bootleg.png",
+        // "Bootlegs": "bootleg.png", // Duplicate removed (merged below)
         "Promo Only": "promo-only.png",
         "Spinback Promos": "spinback-promos.png",
         // Comprehensive list of all active pools
@@ -377,6 +376,16 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
 
     // --- RENDERERS ---
 
+    const cleanDisplayName = (name: string) => {
+        if (!name) return '';
+        return name
+            .replace(/Altoremix\.com\.ar\s*-\s*/gi, '')
+            .replace(/www\.altoremix\.com\.ar/gi, '')
+            .replace(/Altoremix\.com\.ar/gi, '')
+            .split(' - ')[0] // Optional: keep it very short if desired, but regex is safer
+            .trim();
+    };
+
     if (currentLevel === 'brands') {
         return (
             <div className="pt-10">
@@ -444,7 +453,8 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                             }}
                             className={`text-[10px] font-black uppercase tracking-[0.2em] ${i === path.length - 1 ? 'text-[#ff0055]' : 'text-gray-600 hover:text-gray-400'}`}
                         >
-                            {p}
+                            {/* Visual clean for breadcrumbs */}
+                            {p.replace(/Altoremix\.com\.ar\s*-\s*/gi, '').replace(/www\.altoremix\.com\.ar/gi, '').trim()}
                         </button>
                     </div>
                 ))}
@@ -483,7 +493,9 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                                         <Folder size={22} />
                                     </div>
                                     <div>
-                                        <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{folder}</h3>
+                                        <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">
+                                            {cleanDisplayName(folder)}
+                                        </h3>
                                         <div className="flex items-center gap-2">
                                             <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">folder</span>
                                         </div>
