@@ -65,17 +65,28 @@ const AppContent = () => {
           setRealTracks(mappedTracks);
         }
 
-        // Fetch Featured Pack (Latest Pack)
+        // Fetch Featured Pack - Fixed to a specific popular DJPACKS pack
         const { data: packData } = await supabase
           .from('dj_tracks')
           .select('*')
+          .eq('pool_id', 'DJPACKS')
           .eq('format', 'pack')
-          .order('created_at', { ascending: false })
+          .ilike('name', '%Club Killers%')
           .limit(1)
           .single();
 
         if (packData) {
           setFeaturedPack(packData);
+        } else {
+          // Fallback: get any DJPACKS pack if specific one not found
+          const { data: fallbackPack } = await supabase
+            .from('dj_tracks')
+            .select('*')
+            .eq('pool_id', 'DJPACKS')
+            .eq('format', 'pack')
+            .limit(1)
+            .single();
+          if (fallbackPack) setFeaturedPack(fallbackPack);
         }
       } catch (e) {
         console.error("Error fetching data", e);
