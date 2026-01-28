@@ -39,7 +39,7 @@ export function CinematicHero({ onPlay, pack, loading }: CinematicHeroProps) {
                     alt="Featured DJ Pack"
                     loading="eager"
                     decoding="async"
-                    fetchPriority="high"
+                    fetchpriority="high"
                     className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#000] via-[#000]/40 to-transparent" />

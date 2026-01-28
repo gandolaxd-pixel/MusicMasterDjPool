@@ -13,6 +13,7 @@ interface PoolGridProps {
     overridePoolId?: string;
 }
 
+// BUILD: 2026-01-29-v2 - Force browser reload
 const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
     // Navigation State - supports unlimited depth
     const [path, setPath] = useState<string[]>(initialPool ? [initialPool] : []);
@@ -235,6 +236,8 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                     console.error('Error fetching folders:', folderError);
                 }
 
+                console.log('[DEBUG] cachedFolders:', cachedFolders?.length, 'parentPathToQuery:', parentPathToQuery);
+                
                 if (cachedFolders && cachedFolders.length > 0) {
                     cachedFolders.forEach(f => folderSet.add(f.name));
                 } else {
@@ -249,7 +252,6 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                     }
 
                     // Buscar tracks directamente con ILIKE
-                    // El searchPrefix ya tiene el path correcto (ej: /80s/80'S%20%201000%20HITS/)
                     const searchPattern = searchPrefix + '%';
                     console.log('[DEBUG] Buscando tracks, pool:', trackPoolId, 'pattern:', searchPattern);
                     
@@ -275,6 +277,8 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                         setCurrentLevel('tracks');
                         setLoading(false);
                         return;
+                    } else {
+                        console.log('[DEBUG] No tracks found! Showing empty state');
                     }
                 }
 

@@ -29,13 +29,26 @@ export function getTrackUrl(track: Track, asDownload: boolean = false, token?: s
         return url;
     }
 
-    const path = track.file_path || track.server_path || track.filename;
+    const rawPath = track.file_path || track.server_path || track.filename;
 
-    if (!path) return '';
+    if (!rawPath) return '';
 
     // If path is already absolute URL
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-        return path;
+    if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
+        return rawPath;
+    }
+
+    // Decode first if already encoded (to avoid double encoding)
+    // Then encode once for URL safety
+    let path = rawPath;
+    try {
+        // Check if path contains encoded characters
+        if (rawPath.includes('%')) {
+            path = decodeURIComponent(rawPath);
+        }
+    } catch (e) {
+        // If decode fails, use original
+        path = rawPath;
     }
 
     // 2. Build Query Params
