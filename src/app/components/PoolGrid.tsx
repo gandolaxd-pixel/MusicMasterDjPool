@@ -12,9 +12,10 @@ interface SpecialNames {
 
 interface PoolGridProps {
     initialPool?: string;
+    overridePoolId?: string;
 }
 
-const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
+const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
     // Navigation State - supports unlimited depth
     const [path, setPath] = useState<string[]>(initialPool ? [initialPool] : []);
     const [currentLevel, setCurrentLevel] = useState<'brands' | 'navigation' | 'tracks'>(initialPool ? 'navigation' : 'brands');
@@ -99,12 +100,27 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
 
     // Load brands on mount (skip if initialPool is set)
     useEffect(() => {
+        if (overridePoolId === 'RETRO_VAULT') {
+            if (path.length === 0) {
+                setBrandList([]);
+                setCurrentLevel('navigation');
+                setFolderItems([
+                    '80s',
+                    '12 INCH',
+                    'DANCE CLASSICS COLLECTION',
+                    'DANCE EURO COLLECTION',
+                    'ITALO_DISCO'
+                ]);
+            }
+            return;
+        }
+
         if (!initialPool && currentLevel === 'brands') {
             const allPools = Object.keys(specialNames).sort();
             const unique = Array.from(new Set(allPools));
             setBrandList(unique);
         }
-    }, [currentLevel, initialPool]);
+    }, [currentLevel, initialPool, overridePoolId, path.length]);
 
     // Navigate folder structure based on server_path
     useEffect(() => {
@@ -113,14 +129,18 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                 setLoading(true);
                 const brand = path[0];
 
-                // Determine pool_id based on current brand
+                // Determine pool_id based on current brand or override
                 let poolId = 'BEATPORT';
-                if (brand === 'DJPACKS') poolId = 'DJPACKS';
+                if (overridePoolId) poolId = overridePoolId;
+                else if (brand === 'DJPACKS') {
+                    if (path.includes('SOUTH AMERICA DJ PACKS')) poolId = 'SOUTH AMERICA';
+                    else poolId = 'DJPACKS';
+                }
                 else if (brand === 'BEATPORT') poolId = 'BEATPORT';
                 else poolId = brand;
 
                 // --- VIRTUAL NAVIGATION FOR DJ POOLS (Club Killers, etc) ---
-                if (poolId !== 'DJPACKS' && poolId !== 'BEATPORT') {
+                if (!['DJPACKS', 'BEATPORT', 'SOUTH AMERICA', 'RETRO_VAULT'].includes(poolId)) {
                     // Level 1: Years (Root)
                     if (path.length === 1) {
                         // Check which years exist for this pool
@@ -206,24 +226,31 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                     }
                 }
 
-                // --- EXISTING LOGIC FOR DJPACKS / BEATPORT (Indexed Folders) ---
+                // --- EXISTING LOGIC FOR DJPACKS / BEATPORT / RETRO (Indexed Folders) ---
 
                 let searchPrefix = '';
-                if (brand === 'Beatport') {
-                    const subPath = path.slice(1).join('/');
-                    searchPrefix = `/${subPath ? subPath + '/' : ''}`;
-                } else if (brand === 'DJPACKS') {
+
+                if (overridePoolId === 'RETRO_VAULT') {
+                    // Path is direct folder structure e.g. ['80s', 'Sub']
+                    const relativePath = path.join('/');
+                    searchPrefix = `/${relativePath}`;
+                }
+                else if (brand === 'DJPACKS') {
                     // Custom mapping for SOUTH AMERICA
                     if (path.includes('SOUTH AMERICA DJ PACKS')) {
                         const relativePath = path.slice(path.indexOf('SOUTH AMERICA DJ PACKS') + 1).join('/');
                         searchPrefix = `/REMIXEN/${relativePath}`;
-                        searchPrefix = searchPrefix.replace(/\/+$/, '') + '/'; // ensure trailing slash for prefix logic
                     } else {
                         searchPrefix = `/${path.join('/')}`;
                     }
-                } else {
+                }
+                else {
+                    // BEATPORT and fallback
                     searchPrefix = `/${path.join('/')}`;
                 }
+
+                // Ensure valid prefix
+                searchPrefix = searchPrefix.replace(/\/+/g, '/').replace(/\/+$/, '') + '/';
                 const prefixDepth = searchPrefix.split('/').filter(Boolean).length;
 
                 // 🚀 SUPER FAST INDEXED NAVIGATION (10TB Scale)
