@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { Download, Calendar, Play, Pause } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { getTrackUrl } from '../utils/urlUtils';
+import { EmptyState } from '../app/components/EmptyState';
 
 interface DownloadRecord {
     id: string;
@@ -14,6 +15,7 @@ interface DownloadRecord {
 export const HistoryPage = ({ user }: { user: any }) => {
     const [downloads, setDownloads] = useState<DownloadRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const { playTrack, currentTrack, isPlaying } = usePlayer();
 
     useEffect(() => {
@@ -27,8 +29,11 @@ export const HistoryPage = ({ user }: { user: any }) => {
                 .eq('user_id', user.id) // Ensure RLS policy
                 .order('created_at', { ascending: false });
 
-            if (!error && data) {
+            if (error) {
+                setError('No se pudo cargar el historial. Intenta más tarde.');
+            } else if (data) {
                 setDownloads(data);
+                setError(null);
             }
             setLoading(false);
         };
@@ -46,10 +51,16 @@ export const HistoryPage = ({ user }: { user: any }) => {
 
             {loading ? (
                 <div className="text-center py-20 text-gray-500 text-xs font-bold uppercase tracking-widest animate-pulse">Loading history...</div>
+            ) : error ? (
+                <EmptyState
+                    title="Error al cargar"
+                    description={error}
+                />
             ) : downloads.length === 0 ? (
-                <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl">
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">No downloads yet.</p>
-                </div>
+                <EmptyState
+                    title="No downloads yet"
+                    description="Explora los pools y guarda tus pistas favoritas para verlas aquí."
+                />
             ) : (
                 <div className="space-y-2">
                     {downloads.map(item => {

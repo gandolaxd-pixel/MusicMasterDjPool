@@ -23,6 +23,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
 
     // Live Stats
     const [stats, setStats] = useState({ totalTracks: 0, addedToday: 0, lastUpdate: 'Loading...' });
+    const [statsError, setStatsError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -65,6 +66,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                 });
             } catch (error) {
                 console.error('Error fetching stats:', error);
+                setStatsError('No se pudieron cargar las estadísticas en este momento.');
             }
         };
 
@@ -154,6 +156,11 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                         </div>
                     </div>
                 </div>
+                {statsError && (
+                    <div className="text-[10px] uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                        {statsError}
+                    </div>
+                )}
 
                 {/* B. SMART CRATES (Utility) */}
                 <div>

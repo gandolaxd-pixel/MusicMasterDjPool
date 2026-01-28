@@ -1,5 +1,5 @@
 // src/App.tsx - ADVANCED ARCHITECTURE
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Providers
@@ -10,14 +10,14 @@ import { CrateProvider } from '../../context/CrateContext';
 
 // Layouts & Pages
 import { RootLayout } from '../../layouts/RootLayout';
-import { HomePage } from '../../pages/Home';
-import { SearchPage } from '../../pages/Search';
-import { PoolsPage } from '../../pages/Pools';
-import { PacksPage } from '../../pages/Packs';
-import { HistoryPage } from '../../pages/History';
-import { SubscriptionPage } from '../../pages/Subscription';
-import { RetroVault } from '../../pages/RetroVault';
-import { CategoriesPage } from '../../pages/Categories';
+const HomePage = lazy(() => import('../../pages/Home').then(module => ({ default: module.HomePage })));
+const SearchPage = lazy(() => import('../../pages/Search').then(module => ({ default: module.SearchPage })));
+const PoolsPage = lazy(() => import('../../pages/Pools').then(module => ({ default: module.PoolsPage })));
+const PacksPage = lazy(() => import('../../pages/Packs').then(module => ({ default: module.PacksPage })));
+const HistoryPage = lazy(() => import('../../pages/History').then(module => ({ default: module.HistoryPage })));
+const SubscriptionPage = lazy(() => import('../../pages/Subscription').then(module => ({ default: module.SubscriptionPage })));
+const RetroVault = lazy(() => import('../../pages/RetroVault').then(module => ({ default: module.RetroVault })));
+const CategoriesPage = lazy(() => import('../../pages/Categories').then(module => ({ default: module.CategoriesPage })));
 
 // Global Components
 import { Navigation } from './NavigationMaster';
@@ -124,34 +124,36 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<RootLayout />}>
+      <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#ff0055]"></div></div>}>
+        <Routes>
+          <Route path="/" element={<RootLayout />}>
 
-          <Route index element={
-            <HomePage
-              realTracks={realTracks}
-              selectedGenre={selectedGenre}
-              onGenreSelect={handleGenreSelect}
-              user={user}
-              featuredPack={featuredPack}
-              loading={dataLoading}
-            />}
-          />
+            <Route index element={
+              <HomePage
+                realTracks={realTracks}
+                selectedGenre={selectedGenre}
+                onGenreSelect={handleGenreSelect}
+                user={user}
+                featuredPack={featuredPack}
+                loading={dataLoading}
+              />}
+            />
 
-          <Route path="search" element={<SearchPage user={user} />} />
+            <Route path="search" element={<SearchPage user={user} />} />
 
-          <Route path="pools" element={<PoolsPage />} />
+            <Route path="pools" element={<PoolsPage />} />
 
-          <Route path="packs" element={<PacksPage user={user} />} />
-          <Route path="retro" element={<RetroVault />} />
-          <Route path="categories" element={<CategoriesPage realTracks={realTracks} user={user} />} />
-          <Route path="history" element={<HistoryPage user={user} />} />
-          <Route path="subscription" element={<SubscriptionPage user={user} />} />
+            <Route path="packs" element={<PacksPage user={user} />} />
+            <Route path="retro" element={<RetroVault />} />
+            <Route path="categories" element={<CategoriesPage realTracks={realTracks} user={user} />} />
+            <Route path="history" element={<HistoryPage user={user} />} />
+            <Route path="subscription" element={<SubscriptionPage user={user} />} />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
 
-        </Route>
-      </Routes>
+          </Route>
+        </Routes>
+      </Suspense>
 
       {currentTrack && (
         <AudioPlayer
