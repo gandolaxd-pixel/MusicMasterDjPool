@@ -378,11 +378,16 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
 
     const cleanDisplayName = (name: string) => {
         if (!name) return '';
+        try {
+            name = decodeURIComponent(name);
+        } catch (e) {
+            // ignore error if malformed
+        }
         return name
             .replace(/Altoremix\.com\.ar\s*-\s*/gi, '')
             .replace(/www\.altoremix\.com\.ar/gi, '')
             .replace(/Altoremix\.com\.ar/gi, '')
-            .split(' - ')[0] // Optional: keep it very short if desired, but regex is safer
+            .split(' - ')[0]
             .trim();
     };
 
