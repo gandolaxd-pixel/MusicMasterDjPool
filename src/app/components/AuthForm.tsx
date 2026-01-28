@@ -12,14 +12,33 @@ export function AuthForm({ selectedPlan }: AuthFormProps) {
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(!!selectedPlan);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [touched, setTouched] = useState({ email: false, password: false });
 
   // Update register mode if plan is selected
   React.useEffect(() => {
     if (selectedPlan) setIsRegistering(true);
   }, [selectedPlan]);
 
+  const emailError = (() => {
+    if (!touched.email) return '';
+    if (!email.trim()) return 'El email es obligatorio.';
+    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    return isValid ? '' : 'Ingresa un email válido.';
+  })();
+
+  const passwordError = (() => {
+    if (!touched.password) return '';
+    if (!password.trim()) return 'La contraseña es obligatoria.';
+    if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+    return '';
+  })();
+
+  const isFormValid = !emailError && !passwordError && email.trim() && password.trim();
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    setTouched({ email: true, password: true });
+    if (!isFormValid) return;
     setLoading(true);
     setMessage(null);
 
@@ -27,13 +46,13 @@ export function AuthForm({ selectedPlan }: AuthFormProps) {
       if (isRegistering) {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        setMessage({ type: 'success', text: 'Check your email to confirm registration!' });
+        setMessage({ type: 'success', text: 'Revisa tu email para confirmar el registro.' });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
+      setMessage({ type: 'error', text: error.message || 'Ocurrió un error. Intenta nuevamente.' });
     } finally {
       setLoading(false);
     }
@@ -55,9 +74,17 @@ export function AuthForm({ selectedPlan }: AuthFormProps) {
             placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#ff0055] focus:ring-1 focus:ring-[#ff0055] transition-all"
+            onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
+            aria-invalid={!!emailError}
+            aria-describedby="auth-email-error"
+            className={`w-full bg-black/40 border rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 transition-all ${emailError ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/30' : 'border-white/10 focus:border-[#ff0055] focus:ring-[#ff0055]'}`}
             required
           />
+          {emailError && (
+            <p id="auth-email-error" className="mt-2 text-[10px] text-red-400 uppercase tracking-widest">
+              {emailError}
+            </p>
+          )}
         </div>
 
         <div className="relative group">
@@ -67,9 +94,17 @@ export function AuthForm({ selectedPlan }: AuthFormProps) {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-[#ff0055] focus:ring-1 focus:ring-[#ff0055] transition-all"
+            onBlur={() => setTouched(prev => ({ ...prev, password: true }))}
+            aria-invalid={!!passwordError}
+            aria-describedby="auth-password-error"
+            className={`w-full bg-black/40 border rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 transition-all ${passwordError ? 'border-red-500/60 focus:border-red-500 focus:ring-red-500/30' : 'border-white/10 focus:border-[#ff0055] focus:ring-[#ff0055]'}`}
             required
           />
+          {passwordError && (
+            <p id="auth-password-error" className="mt-2 text-[10px] text-red-400 uppercase tracking-widest">
+              {passwordError}
+            </p>
+          )}
         </div>
 
         {message && (
