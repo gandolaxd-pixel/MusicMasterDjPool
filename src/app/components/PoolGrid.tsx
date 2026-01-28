@@ -70,7 +70,11 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
         "Remix Planet": "remixplanet.png",
         "The Mash Up": "themashup.png",
         "Are You Kiddy": "areyoukidy.png",
-        "DMP": "dmp.png"
+        "DMP": "dmp.png",
+        // New mappings for new icons
+        "Bootlegs": "bootleg.png",
+        "Promo Only": "promo-only.png",
+        "Spinback Promos": "spinback-promos.png"
     };
 
     // Load brands on mount (skip if initialPool is set)
