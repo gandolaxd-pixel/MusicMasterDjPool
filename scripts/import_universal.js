@@ -6,13 +6,23 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Configuración Supabase - USAR SERVICE_ROLE para bypasear RLS
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://mnfcbeasyebrgxhfitiv.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY; // ← FIX: usar SERVICE_ROLE
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Configuración StorageBox
-const STORAGE_USER = process.env.HETZNER_USER || 'u529624-sub1';
-const STORAGE_PASS = process.env.HETZNER_PASS || 'Gandola2026!';
-const STORAGE_HOST = process.env.HETZNER_HOST || 'u529624-sub1.your-storagebox.de';
+// Configuración StorageBox - REQUIRED from .env
+const STORAGE_USER = process.env.HETZNER_USER;
+const STORAGE_PASS = process.env.HETZNER_PASS;
+const STORAGE_HOST = process.env.HETZNER_HOST;
+
+// Validate required env vars
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.error("❌ Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env");
+    process.exit(1);
+}
+if (!STORAGE_USER || !STORAGE_PASS || !STORAGE_HOST) {
+    console.error("❌ Missing HETZNER_USER, HETZNER_PASS, or HETZNER_HOST in .env");
+    process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 

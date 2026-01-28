@@ -4,19 +4,30 @@ import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// 1. CONFIGURACIÓN
+// 1. CONFIGURACIÓN - From .env
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY;
-// Nota: Para escribir en BD necesitamos la SERVICE_ROLE_KEY si las RLS están activas. 
-// Asumiremos que ANON_KEY tiene permisos o el usuario proveerá la SERVICE_KEY en .env
-// Por seguridad en frontend projects suele estar solo la ANON. 
-// Si falla, pediremos la SERVICE_KEY.
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.error("❌ Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env");
+    process.exit(1);
+}
+
+const SFTP_HOST = process.env.HETZNER_HOST;
+const SFTP_USER = process.env.HETZNER_USER;
+const SFTP_PASS = process.env.HETZNER_PASS;
+const SFTP_PORT = parseInt(process.env.HETZNER_PORT || '23', 10);
+
+if (!SFTP_HOST || !SFTP_USER || !SFTP_PASS) {
+    console.error("❌ Missing HETZNER_HOST, HETZNER_USER, or HETZNER_PASS in .env");
+    process.exit(1);
+}
 
 const SFTP_CONFIG = {
-    host: "u529624-sub1.your-storagebox.de",
-    username: "u529624-sub1",
-    password: "Gandola2026!",
-    port: 23,
+    host: SFTP_HOST,
+    username: SFTP_USER,
+    password: SFTP_PASS,
+    port: SFTP_PORT,
 };
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {

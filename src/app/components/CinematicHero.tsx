@@ -37,6 +37,9 @@ export function CinematicHero({ onPlay, pack, loading }: CinematicHeroProps) {
                 <img
                     src="https://www.pioneerdj.com/-/media/pioneerdj/images/news/2019/learn-how-to-dj-online/learnhowtodj_article.png?h=630&w=1200&hash=384F58B20E867AB51E52FDF3D768AE91"
                     alt="Featured DJ Pack"
+                    loading="eager"
+                    decoding="async"
+                    fetchPriority="high"
                     className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#000] via-[#000]/40 to-transparent" />

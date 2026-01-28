@@ -32,7 +32,13 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
   useEffect(() => {
     const fetchStructure = async () => {
       setLoading(true);
-      const { data } = await supabase.from('dj_tracks').select('*').eq('format', 'pack');
+      // Solo necesitamos original_folder para construir el árbol, no todos los campos
+      const { data } = await supabase
+        .from('dj_tracks')
+        .select('id, original_folder, name, title, server_path')
+        .eq('format', 'pack')
+        .order('original_folder')
+        .limit(5000); // Límite de seguridad para packs
       if (data) {
         const root: any = { name: 'root', type: 'year', children: {} };
         data.forEach((pack: any) => {
@@ -108,9 +114,11 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
 
     const { data } = await supabase
       .from('dj_tracks')
-      .select('*')
-      .eq('original_folder', currentFolder) // Usamos la var local
-      .eq('format', 'file');
+      .select('id, name, title, server_path, original_folder, format')
+      .eq('original_folder', currentFolder)
+      .eq('format', 'file')
+      .order('name')
+      .limit(500); // Límite por pack
 
     // 2. Solo actualizamos si el usuario NO ha cambiado de carpeta mientras cargaba
     if (activeFolderRef.current === currentFolder) {

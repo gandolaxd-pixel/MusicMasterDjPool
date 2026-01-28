@@ -3,9 +3,14 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const STORAGE_USER = process.env.HETZNER_USER || 'u529624-sub1';
-const STORAGE_PASS = process.env.HETZNER_PASS || 'Gandola2026!';
-const STORAGE_HOST = process.env.HETZNER_HOST || 'u529624-sub1.your-storagebox.de';
+const STORAGE_USER = process.env.HETZNER_USER;
+const STORAGE_PASS = process.env.HETZNER_PASS;
+const STORAGE_HOST = process.env.HETZNER_HOST;
+
+if (!STORAGE_USER || !STORAGE_PASS || !STORAGE_HOST) {
+    console.error("❌ Missing HETZNER_USER, HETZNER_PASS, or HETZNER_HOST in .env");
+    process.exit(1);
+}
 
 async function check2026() {
     console.log("🔍 Checking availability of /BEATPORT2026...");

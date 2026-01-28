@@ -72,27 +72,25 @@ const AppContent = () => {
         }
 
         // Fetch Featured Pack - Fixed to a specific popular DJPACKS pack
-        const { data: packData } = await supabase
+        const { data: packResults } = await supabase
           .from('dj_tracks')
           .select('*')
           .eq('pool_id', 'DJPACKS')
           .eq('format', 'pack')
           .ilike('name', '%Club Killers%')
-          .limit(1)
-          .single();
+          .limit(1);
 
-        if (packData) {
-          setFeaturedPack(packData);
+        if (packResults && packResults.length > 0) {
+          setFeaturedPack(packResults[0]);
         } else {
           // Fallback: get any DJPACKS pack if specific one not found
-          const { data: fallbackPack } = await supabase
+          const { data: fallbackPacks } = await supabase
             .from('dj_tracks')
             .select('*')
             .eq('pool_id', 'DJPACKS')
             .eq('format', 'pack')
-            .limit(1)
-            .single();
-          if (fallbackPack) setFeaturedPack(fallbackPack);
+            .limit(1);
+          if (fallbackPacks && fallbackPacks.length > 0) setFeaturedPack(fallbackPacks[0]);
         }
       } catch (e) {
         console.error("Error fetching data", e);

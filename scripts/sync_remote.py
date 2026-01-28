@@ -2,24 +2,31 @@ import paramiko
 import os
 from supabase import create_client, Client
 from stat import S_ISDIR
+from dotenv import load_dotenv
 
-# --- 1. DATOS DE CONEXIÓN HETZNER ---
-HETZNER_HOST = "u529624-sub1.your-storagebox.de"
-HETZNER_USER = "u529624-sub1"
-HETZNER_PASS = "Gandola2026!"
-HETZNER_PORT = 23
+load_dotenv()
+
+# --- 1. DATOS DE CONEXIÓN HETZNER (from .env) ---
+HETZNER_HOST = os.getenv("HETZNER_HOST")
+HETZNER_USER = os.getenv("HETZNER_USER")
+HETZNER_PASS = os.getenv("HETZNER_PASS")
+HETZNER_PORT = int(os.getenv("HETZNER_PORT", "23"))
 
 # --- 2. RUTA BASE ---
 BASE_PATH = "DJPOOLS/JAN"
 
-# --- 3. DATOS SUPABASE ---
-SUPABASE_URL = "https://mnfcbeasyebrgxhfitiv.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1uZmNiZWFzeWVicmd4aGZpdGl2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODQyNjI1NiwiZXhwIjoyMDg0MDAyMjU2fQ.s732yKfkPR-RUsHSB8THwKbqxDlvjAcDXHRNwL3RlFo"
+# --- 3. DATOS SUPABASE (from .env) ---
+SUPABASE_URL = os.getenv("VITE_SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
-# --- INICIO ---
-if "PEGAR_" in SUPABASE_KEY:
-    print("🛑 ERROR: Faltan las claves de Supabase (Líneas 18-19).")
-    exit()
+# --- VALIDATION ---
+if not HETZNER_HOST or not HETZNER_USER or not HETZNER_PASS:
+    print("❌ Missing HETZNER_HOST, HETZNER_USER, or HETZNER_PASS in .env")
+    exit(1)
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("❌ Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env")
+    exit(1)
 
 try:
     print("🔹 Configurando Supabase...")

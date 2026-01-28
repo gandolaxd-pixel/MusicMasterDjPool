@@ -6,12 +6,34 @@ import * as fs from 'fs';
 import NodeID3 from 'node-id3';
 import { createClient } from '@supabase/supabase-js';
 
-// Load credentials from Environment Variables
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+    'https://musicmasterpool.com',
+    'https://www.musicmasterpool.com',
+    process.env.FRONTEND_URL,
+].filter(Boolean) as string[];
+
+function getCorsOrigin(origin: string | undefined): string {
+    if (!origin) return ALLOWED_ORIGINS[0] || '';
+    if (ALLOWED_ORIGINS.includes(origin)) return origin;
+    // Allow localhost in development
+    if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
+        return origin;
+    }
+    return ALLOWED_ORIGINS[0] || '';
+}
+
+// Load credentials from Environment Variables (REQUIRED)
 const STORAGE_CONFIG = {
     user: process.env.STORAGE_USER,
     pass: process.env.STORAGE_PASS,
-    host: process.env.STORAGE_HOST || "u529624-sub1.your-storagebox.de"
+    host: process.env.STORAGE_HOST
 };
+
+// Validate required env vars
+if (!STORAGE_CONFIG.user || !STORAGE_CONFIG.pass || !STORAGE_CONFIG.host) {
+    console.error("❌ CRITICAL: Missing STORAGE_USER, STORAGE_PASS, or STORAGE_HOST in environment");
+}
 
 // --- SECURITY: SUPABASE CLIENT ---
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -184,11 +206,15 @@ function createWavId3Chunk(imageBuffer: Buffer, filename: string): Buffer {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // Enable CORS
+    const origin = req.headers.origin;
+    const corsOrigin = getCorsOrigin(origin);
+
+    // Enable CORS with restricted origins
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Range, Authorization');
+    res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Accept, Content-Type, Range, Authorization');
+    res.setHeader('Vary', 'Origin');
 
     if (req.method === 'OPTIONS') {
         res.status(200).end();

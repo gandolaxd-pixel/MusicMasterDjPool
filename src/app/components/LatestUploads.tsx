@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { getTrackUrl } from '../../utils/urlUtils';
 import { TrackSkeleton } from './TrackSkeleton';
 import { EmptyState } from './EmptyState';
-import { usePlayer } from '../../context/PlayerContext'; // Import usePlayer
+import { usePlayer } from '../../context/PlayerContext';
 
 const POOL_COLORS: Record<string, string> = {
   'DJ City': '#ff0055', 'BPM Supreme': '#ff6b00', 'Club Killers': '#ffcc00', 'Heavy Hits': '#00ffcc',
@@ -24,7 +24,7 @@ interface LatestUploadsProps {
 }
 
 export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, currentTrack, isPlaying, loading = false }: LatestUploadsProps) {
-  const { token, playQueue } = usePlayer(); // Get secure token and playQueue for navigation
+  const { token, playQueue, togglePlay } = usePlayer();
 
   const filteredTracks = useMemo(() => {
     if (!selectedGenre) return tracks;
@@ -48,6 +48,17 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, curr
     document.getElementById('latest')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Handler para play/pause
+  const handlePlayPause = (track: any, index: number, isActive: boolean, isPlayingCurrent: boolean) => {
+    if (isActive) {
+      // Track activo: toggle play/pause
+      togglePlay();
+    } else {
+      // Otro track: cargar nueva cola y reproducir
+      playQueue(currentTracks, index);
+    }
+  };
+
   return (
     <section id="latest" className="py-12 bg-black min-h-[400px]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -63,7 +74,6 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, curr
 
         <div className="grid grid-cols-1 gap-2">
           {loading ? (
-            // Render 10 skeletons while loading
             Array.from({ length: 15 }).map((_, i) => <TrackSkeleton key={i} />)
           ) : currentTracks.length > 0 ? (
             currentTracks.map((track, index) => {
@@ -72,18 +82,24 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, curr
               const poolName = track.pool_origin || 'default';
               const trackColor = POOL_COLORS[poolName] || POOL_COLORS['default'];
 
-              const isActive = currentTrack && currentTrack.id === track.id;
+              // Comparación robusta por id o title
+              const isActive = currentTrack && (
+                currentTrack.id === track.id || 
+                currentTrack.title === track.title ||
+                currentTrack.title === track.name
+              );
               const isPlayingCurrent = isActive && isPlaying;
 
               return (
                 <div key={`track-${track.id}`} className={`group rounded-xl p-4 transition-all duration-300 ${isActive ? 'bg-white/10 border-l-4 shadow-[0_10px_30px_rgba(0,0,0,0.45)] scale-[1.01]' : 'bg-[#0a0a0a] border-l-4 border-white/5 hover:bg-white/[0.03]'}`} style={{ borderLeftColor: isActive ? trackColor : `${trackColor}`, boxShadow: isActive ? `0 0 20px ${trackColor}20` : 'none' }}>
                   <div className="flex items-center gap-4">
 
-                    {/* Botón Play/Pausa - Uses playQueue for prev/next navigation */}
+                    {/* Botón Play/Pausa */}
                     <button
-                      onClick={() => playQueue(currentTracks, index)}
+                      onClick={() => handlePlayPause(track, index, isActive, isPlayingCurrent)}
                       className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-transform shadow-lg cursor-pointer ${isActive ? 'scale-110' : 'hover:scale-110'}`}
                       style={{ backgroundColor: isActive ? '#fff' : '#ff0055' }}
+                      aria-label={isPlayingCurrent ? 'Pausar' : 'Reproducir'}
                     >
                       {isPlayingCurrent ? (
                         <Pause size={16} className="text-black fill-black" />
@@ -102,9 +118,8 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, curr
                       </div>
                       <div className="hidden md:block col-span-1">
                         {(() => {
-                          // Look for extension in multiple fields
                           const sources = [track.title, track.filename, track.file_path, track.name].filter(Boolean);
-                          let ext = 'MP3'; // default
+                          let ext = 'MP3';
                           for (const src of sources) {
                             const match = src.match(/\.(mp3|wav|flac|aiff|aac|m4a|ogg|zip)$/i);
                             if (match) {
@@ -155,10 +170,8 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, curr
               <ChevronLeft size={16} />
             </button>
 
-            {/* Simple logic for visible pages: show current, +/- 2, first, last */}
             {Array.from({ length: totalPages }).map((_, i) => {
               const page = i + 1;
-              // Show first, last, current, and adjacent pages
               if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
                 return (
                   <button

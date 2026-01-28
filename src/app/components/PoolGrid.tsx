@@ -35,6 +35,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
             if (path.length === 0) {
                 setBrandList([]);
                 setCurrentLevel('navigation');
+                // Carpetas raíz de RETRO_VAULT según la DB
                 setFolderItems([
                     '80s',
                     '12 INCH',
@@ -70,12 +71,11 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                 else if (brand === 'BEATPORT') poolId = 'BEATPORT';
                 else poolId = brand;
 
-                // --- VIRTUAL NAVIGATION FOR DJ POOLS (Club Killers, etc) ---
+                // --- VIRTUAL NAVIGATION FOR DJ POOLS (Club Killers, DDP, etc) ---
+                // Estos pools NO usan dj_folders, navegan por drop_month/drop_day
                 if (!['DJPACKS', 'BEATPORT', 'SOUTH AMERICA', 'RETRO_VAULT'].includes(poolId)) {
                     // Level 1: Years (Root)
                     if (path.length === 1) {
-                        // Check which years exist for this pool
-                        // We can assume 2025 and 2026 exist for now or check one track
                         setFolderItems(['2026', '2025']);
                         setTrackList([]);
                         setLoading(false);
@@ -85,20 +85,22 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                     // Level 2: Months (passed Year)
                     if (path.length === 2) {
                         const year = path[1];
-                        // Get distinct months for this pool and year
                         const { data } = await supabase
                             .from('dj_tracks')
                             .select('drop_month')
                             .eq('pool_id', poolId)
-                            .ilike('original_folder', `%/${year}/%`)
-                            .order('drop_month'); // Sorting might need manual helper
+                            .ilike('original_folder', `%${year}%`)
+                            .order('drop_month')
+                            .limit(1000);
 
-                        if (data) {
+                        if (data && data.length > 0) {
                             const uniqueMonths = Array.from(new Set(data.filter(d => d.drop_month).map(d => d.drop_month)))
                                 .sort((a, b) => (MONTH_MAP[a] || 99) - (MONTH_MAP[b] || 99));
                             setFolderItems(uniqueMonths);
-                            setTrackList([]);
+                        } else {
+                            setFolderItems([]);
                         }
+                        setTrackList([]);
                         setLoading(false);
                         return;
                     }
@@ -112,35 +114,39 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                             .from('dj_tracks')
                             .select('drop_day')
                             .eq('pool_id', poolId)
-                            .ilike('original_folder', `%/${year}/%`)
+                            .ilike('original_folder', `%${year}%`)
                             .eq('drop_month', month)
-                            .order('drop_day', { ascending: true });
+                            .order('drop_day', { ascending: true })
+                            .limit(500);
 
-                        if (data) {
+                        if (data && data.length > 0) {
                             const uniqueDays = Array.from(new Set(data.map(d => d.drop_day?.toString()))).filter(Boolean).sort((a, b) => parseInt(a!) - parseInt(b!));
                             setFolderItems(uniqueDays);
-                            setTrackList([]);
+                        } else {
+                            setFolderItems([]);
                         }
+                        setTrackList([]);
                         setLoading(false);
                         return;
                     }
 
                     // Level 4: Tracks (passed Day)
-                    if (path.length === 4) {
+                    if (path.length >= 4) {
                         const year = path[1];
                         const month = path[2];
                         const day = parseInt(path[3]);
 
                         const { data: tracks } = await supabase
                             .from('dj_tracks')
-                            .select('*')
+                            .select('id, name, title, server_path, pool_id, original_folder, drop_month, drop_day')
                             .eq('pool_id', poolId)
-                            .ilike('original_folder', `%/${year}/%`)
+                            .ilike('original_folder', `%${year}%`)
                             .eq('drop_month', month)
                             .eq('drop_day', day)
-                            .order('name');
+                            .order('name')
+                            .limit(500);
 
-                        if (tracks) {
+                        if (tracks && tracks.length > 0) {
                             const mapped = tracks.map((item: any) => ({
                                 ...item,
                                 pool_origin: item.pool_id,
@@ -150,6 +156,8 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                             setTrackList(mapped);
                             setFolderItems([]);
                             setCurrentLevel('tracks');
+                        } else {
+                            setTrackList([]);
                         }
                         setLoading(false);
                         return;
@@ -160,10 +168,25 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
 
                 let searchPrefix = '';
 
+                // BEATPORT: Mostrar años primero
+                if (brand === 'BEATPORT' && path.length === 1) {
+                    // Nivel raíz de BEATPORT -> mostrar años disponibles
+                    setFolderItems(['2026', '2025']);
+                    setTrackList([]);
+                    setLoading(false);
+                    return;
+                }
+
                 if (overridePoolId === 'RETRO_VAULT') {
-                    // Path is direct folder structure e.g. ['80s', 'Sub']
-                    const relativePath = path.join('/');
+                    // Path viene como ['RETRO VAULT', '80S', 'subfolder...']
+                    // Pero server_path en DB es '/80s/subfolder...' (sin 'RETRO VAULT')
+                    // Quitar 'RETRO VAULT' del path si existe
+                    const pathWithoutBrand = path[0]?.toUpperCase() === 'RETRO VAULT' 
+                        ? path.slice(1) 
+                        : path;
+                    const relativePath = pathWithoutBrand.join('/');
                     searchPrefix = `/${relativePath}`;
+                    console.log('[RETRO_VAULT] path:', path, '-> searchPrefix:', searchPrefix);
                 }
                 else if (brand === 'DJPACKS') {
                     // Custom mapping for SOUTH AMERICA
@@ -198,18 +221,61 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                 const folderSet = new Set<string>();
 
                 // Query cache table logic
-                // Ensure root '/' is handled correctly (don't replace strictly if it results in empty string, unless DB uses empty string for root parent?)
-                // My indexer used '/' for top level parent.
+                // Ensure root '/' is handled correctly
                 const parentPathToQuery = searchPrefix === '/' ? '/' : searchPrefix.replace(/\/$/, '');
 
-                const { data: cachedFolders } = await supabase
+                const { data: cachedFolders, error: folderError } = await supabase
                     .from('dj_folders')
                     .select('name')
                     .eq('parent_path', parentPathToQuery)
-                    .order('name');
+                    .order('name')
+                    .limit(500);
+
+                if (folderError) {
+                    console.error('Error fetching folders:', folderError);
+                }
 
                 if (cachedFolders && cachedFolders.length > 0) {
                     cachedFolders.forEach(f => folderSet.add(f.name));
+                } else {
+                    // Si no hay carpetas en dj_folders, buscar tracks directamente
+                    let trackPoolId = 'BEATPORT';
+                    if (overridePoolId === 'RETRO_VAULT') {
+                        trackPoolId = 'RETRO_VAULT';
+                    } else if (brand === 'DJPACKS') {
+                        trackPoolId = path.includes('SOUTH AMERICA DJ PACKS') ? 'SOUTH AMERICA' : 'DJPACKS';
+                    } else if (brand === 'BEATPORT') {
+                        trackPoolId = 'BEATPORT';
+                    }
+
+                    // Buscar tracks directamente con ILIKE
+                    // El searchPrefix ya tiene el path correcto (ej: /80s/80'S%20%201000%20HITS/)
+                    const searchPattern = searchPrefix + '%';
+                    console.log('[DEBUG] Buscando tracks, pool:', trackPoolId, 'pattern:', searchPattern);
+                    
+                    const { data: directTracks, error: tracksError } = await supabase
+                        .from('dj_tracks')
+                        .select('id, name, title, server_path, pool_id, original_folder')
+                        .eq('pool_id', trackPoolId)
+                        .ilike('server_path', searchPattern)
+                        .order('name')
+                        .limit(500);
+
+                    console.log('[DEBUG] directTracks:', directTracks?.length, 'error:', tracksError);
+
+                    if (directTracks && directTracks.length > 0) {
+                        const mapped = directTracks.map((item: any) => ({
+                            ...item,
+                            pool_origin: item.pool_id,
+                            file_path: item.server_path,
+                            title: item.title || item.name,
+                        }));
+                        setTrackList(mapped);
+                        setFolderItems([]);
+                        setCurrentLevel('tracks');
+                        setLoading(false);
+                        return;
+                    }
                 }
 
                 // INJECT CUSTOM FOLDER FOR DJPACKS ROOT
@@ -241,51 +307,48 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                     setFolderItems([]);
 
                     const folderPath = searchPrefix;
-                    // Determine pool_id based on current brand
-                    let poolId = 'BEATPORT'; // Default
-                    if (brand === 'DJPACKS') {
+                    // Determine pool_id based on current context
+                    let trackPoolId = 'BEATPORT';
+                    if (overridePoolId === 'RETRO_VAULT') {
+                        trackPoolId = 'RETRO_VAULT';
+                    } else if (brand === 'DJPACKS') {
                         if (path.includes('SOUTH AMERICA DJ PACKS')) {
-                            poolId = 'SOUTH AMERICA';
+                            trackPoolId = 'SOUTH AMERICA';
                         } else {
-                            poolId = 'DJPACKS';
+                            trackPoolId = 'DJPACKS';
                         }
-                    }
-                    else if (brand === 'BEATPORT') poolId = 'BEATPORT';
-                    else poolId = brand; // For all other pools (Club Killers, Acapellas, etc.)
-
-                    let query = supabase
-                        .from('dj_tracks')
-                        .select('*')
-                        .eq('pool_id', poolId);
-
-                    // Only filter by folder path if we are navigating folders (DJPACKS/BEATPORT/SOUTH AMERICA)
-                    if (poolId === 'DJPACKS' || poolId === 'BEATPORT' || poolId === 'SOUTH AMERICA') {
-                        query = query.ilike('server_path', `${folderPath}%`);
+                    } else if (brand === 'BEATPORT') {
+                        trackPoolId = 'BEATPORT';
                     } else {
-                        // For specific pools, just show latest tracks
-                        query = query.order('created_at', { ascending: false }).limit(200);
+                        trackPoolId = brand;
                     }
 
-                    // Secondary sort by name
-                    if (poolId === 'DJPACKS' || poolId === 'BEATPORT' || poolId === 'SOUTH AMERICA') {
-                        query = query.order('name');
-                    }
+                    // Buscar tracks con ILIKE (funciona con paths URL-encoded)
+                    const searchPattern = folderPath + '%';
+                    console.log('[DEBUG Fallback] pool:', trackPoolId, 'pattern:', searchPattern);
+                    
+                    const { data: tracks, error: tracksError } = await supabase
+                        .from('dj_tracks')
+                        .select('id, name, title, server_path, pool_id, original_folder, drop_month, drop_day, created_at')
+                        .eq('pool_id', trackPoolId)
+                        .ilike('server_path', searchPattern)
+                        .order('name')
+                        .limit(500);
 
-                    const { data: tracks } = await query;
-                    // removed limit(500) to allow full folder listing if needed, or keep it if performance issue recurs.
-                    // With folders indexed, we only hit this for leaf nodes. 
+                    if (tracksError) {
+                        console.error('Error fetching tracks:', tracksError);
+                    }
+                    
+                    console.log('[DEBUG Fallback] tracks found:', tracks?.length);
 
                     if (tracks && tracks.length > 0) {
-                        let tracksToShow = tracks;
-
-                        // Strict folder level check ONLY for DJPACKS/BEATPORT hierarchy
-                        if (poolId === 'DJPACKS' || poolId === 'BEATPORT' || poolId === 'SOUTH AMERICA') {
-                            tracksToShow = tracks.filter((t: any) => {
-                                if (!t.server_path) return false;
-                                const parts = t.server_path.split('/').filter(Boolean);
-                                return parts.length === prefixDepth + 1;
-                            });
-                        }
+                        // Filtrar solo archivos del nivel actual (no de subcarpetas)
+                        const tracksToShow = tracks.filter((t: any) => {
+                            if (!t.server_path) return false;
+                            const trackParts = t.server_path.split('/').filter(Boolean);
+                            // El track debe estar exactamente un nivel debajo del prefix
+                            return trackParts.length === prefixDepth + 1;
+                        });
 
                         if (tracksToShow.length > 0) {
                             const mapped = tracksToShow.map((item: any) => ({
@@ -297,10 +360,19 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                             setTrackList(mapped);
                             setCurrentLevel('tracks');
                         } else {
-                            setTrackList([]);
+                            // Si no hay tracks en este nivel exacto, mostrar todos los del path
+                            const allMapped = tracks.map((item: any) => ({
+                                ...item,
+                                pool_origin: item.pool_id,
+                                file_path: item.server_path,
+                                title: item.title || item.name,
+                            }));
+                            setTrackList(allMapped);
+                            setCurrentLevel('tracks');
                         }
                     } else {
                         setTrackList([]);
+                        console.log('No tracks found for path:', folderPath, 'poolId:', trackPoolId);
                     }
                 }
                 setLoading(false);
@@ -422,8 +494,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                             }}
                             className={`text-[10px] font-black uppercase tracking-[0.2em] ${i === path.length - 1 ? 'text-[#ff0055]' : 'text-gray-600 hover:text-gray-400'}`}
                         >
-                            {/* Visual clean for breadcrumbs */}
-                            {p.replace(/Altoremix\.com\.ar\s*-\s*/gi, '').replace(/www\.altoremix\.com\.ar/gi, '').trim()}
+                            {cleanDisplayName(p)}
                         </button>
                     </div>
                 ))}
@@ -439,7 +510,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                         </button>
                     )}
                     <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white">
-                        <span className="text-[#ff0055]">{path[path.length - 1]}</span>
+                        <span className="text-[#ff0055]">{cleanDisplayName(path[path.length - 1] || '')}</span>
                         {currentLevel === 'tracks' ? ' Tracks' : ' Contents'}
                     </h2>
                 </div>

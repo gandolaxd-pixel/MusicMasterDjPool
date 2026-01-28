@@ -1,10 +1,18 @@
 import paramiko
+import os
+from dotenv import load_dotenv
 
-# --- TUS DATOS (Ya configurados) ---
-HOST = "u529624-sub1.your-storagebox.de"
-USER = "u529624-sub1"
-PASS = "Gandola2026!"
-PORT = 23
+load_dotenv()
+
+# --- CREDENTIALS FROM .env ---
+HOST = os.getenv("HETZNER_HOST")
+USER = os.getenv("HETZNER_USER")
+PASS = os.getenv("HETZNER_PASS")
+PORT = int(os.getenv("HETZNER_PORT", "23"))
+
+if not HOST or not USER or not PASS:
+    print("❌ Missing HETZNER_HOST, HETZNER_USER, or HETZNER_PASS in .env")
+    exit(1)
 
 def explore():
     print(f"🔦 Conectando a {HOST}...")

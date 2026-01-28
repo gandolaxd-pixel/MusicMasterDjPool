@@ -1,14 +1,23 @@
 import Client from 'ssh2-sftp-client';
 import dotenv from 'dotenv';
 import path from 'path';
+dotenv.config();
 
-// Cargar variables de entorno si existen, sino usar las que vimos en server.js
-// Para este script de prueba usaremos las credenciales directas para asegurar conexión rápida
+const SFTP_HOST = process.env.HETZNER_HOST;
+const SFTP_USER = process.env.HETZNER_USER;
+const SFTP_PASS = process.env.HETZNER_PASS;
+const SFTP_PORT = parseInt(process.env.HETZNER_PORT || '23', 10);
+
+if (!SFTP_HOST || !SFTP_USER || !SFTP_PASS) {
+    console.error("❌ Missing HETZNER_HOST, HETZNER_USER, or HETZNER_PASS in .env");
+    process.exit(1);
+}
+
 const config = {
-    host: "u529624-sub1.your-storagebox.de",
-    username: "u529624-sub1",
-    password: "Gandola2026!",
-    port: 23, // Hetzner Storage Box suele usar puerto 23 para SFTP o 22. Probaremos 23 primero.
+    host: SFTP_HOST,
+    username: SFTP_USER,
+    password: SFTP_PASS,
+    port: SFTP_PORT,
 };
 
 const sftp = new Client();
