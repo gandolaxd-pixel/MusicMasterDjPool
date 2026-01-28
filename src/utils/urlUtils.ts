@@ -20,8 +20,12 @@ export function getTrackUrl(track: Track, asDownload: boolean = false, token?: s
             const separator = url.includes('?') ? '&' : '?';
             url = url.includes('download=true') ? url : `${url}${separator}download=true`;
         }
-        // If we have a token and it's our API, append it? 
-        // Usually absolute URLs might be external.
+
+        if (token) {
+            const separator = url.includes('?') ? '&' : '?';
+            url = `${url}${separator}token=${encodeURIComponent(token)}`;
+        }
+
         return url;
     }
 
