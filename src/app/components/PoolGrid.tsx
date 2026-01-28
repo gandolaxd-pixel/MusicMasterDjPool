@@ -174,8 +174,18 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                         searchPrefix = `/${path.join('/')}`;
                     }
                 }
+                else if (brand === 'BEATPORT' && path.length > 1) {
+                    // BEATPORT 2025 structure is /BEATPORT2025 not /BEATPORT/2025
+                    const year = path[1];
+                    const rest = path.slice(2);
+                    if (rest.length > 0) {
+                        searchPrefix = `/BEATPORT${year}/${rest.join('/')}`;
+                    } else {
+                        searchPrefix = `/BEATPORT${year}`;
+                    }
+                }
                 else {
-                    // BEATPORT and fallback
+                    // Fallback
                     searchPrefix = `/${path.join('/')}`;
                 }
 
