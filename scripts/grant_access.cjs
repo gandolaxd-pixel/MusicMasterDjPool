@@ -15,39 +15,46 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 async function grantAccess(email) {
     if (!email) {
         console.error("❌ Error: Please provide an email address.");
-        console.log("Usage: node scripts/grant_access.cjs user@example.com");
         process.exit(1);
     }
 
-    console.log(`🔍 Looking for user: ${email}...`);
+    console.log(`🔍 Looking for user in Auth system: ${email}...`);
 
-    // 1. Check if user exists in profiles
-    const { data: profile, error: findError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', email)
-        .single();
+    // 1. Find user in the Auth system (auth.users)
+    // Note: This requires SERVICE_ROLE_KEY
+    const { data: { users }, error: authError } = await supabase.auth.admin.listUsers();
 
-    if (findError || !profile) {
-        console.error("❌ User not found in 'profiles' table.");
-        console.log("Make sure the user has signed up and logged in at least once.");
+    if (authError) {
+        console.error("❌ Error listing users:", authError.message);
         return;
     }
 
-    // 2. Update status
-    const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-            subscription_status: 'active',
-            subscription_plan: 'premium_admin' // Optional flag for reference
-        })
-        .eq('id', profile.id);
+    const user = users.find(u => u.email === email);
 
-    if (updateError) {
-        console.error("❌ Failed to update profile:", updateError.message);
+    if (!user) {
+        console.error(`❌ User '${email}' not found in Supabase Auth.`);
+        console.log("Please sign up first.");
+        return;
+    }
+
+    console.log(`✅ Found Auth User ID: ${user.id}`);
+
+    // 2. Upsert into profiles (Create or Update)
+    const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert({
+            id: user.id,
+            email: email,
+            subscription_status: 'active',
+            subscription_plan: 'premium_admin'
+        })
+        .select();
+
+    if (upsertError) {
+        console.error("❌ Failed to update/create profile:", upsertError.message);
     } else {
-        console.log(`✅ SUCCESS! User '${email}' is now ACTIVE.`);
-        console.log("They can now download files without paying.");
+        console.log(`✅ SUCCESS! User '${email}' profile updated/created.`);
+        console.log("Status: ACTIVE (premium_admin)");
     }
 }
 
