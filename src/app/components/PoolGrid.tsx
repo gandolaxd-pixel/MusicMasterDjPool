@@ -147,27 +147,47 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
 
                     const folderPath = searchPrefix;
                     // Determine pool_id based on current brand
-                    const poolId = brand === 'DJPACKS' ? 'DJPACKS' : 'BEATPORT';
+                    let poolId = 'BEATPORT'; // Default
+                    if (brand === 'DJPACKS') poolId = 'DJPACKS';
+                    else if (brand === 'BEATPORT') poolId = 'BEATPORT';
+                    else poolId = brand; // For all other pools (Club Killers, Acapellas, etc.)
 
-                    const { data: tracks } = await supabase
+                    let query = supabase
                         .from('dj_tracks')
                         .select('*')
-                        .eq('pool_id', poolId)
-                        .ilike('server_path', `${folderPath}%`)
-                        .order('name');
+                        .eq('pool_id', poolId);
+
+                    // Only filter by folder path if we are navigating folders (DJPACKS/BEATPORT)
+                    if (poolId === 'DJPACKS' || poolId === 'BEATPORT') {
+                        query = query.ilike('server_path', `${folderPath}%`);
+                    } else {
+                        // For specific pools, just show latest tracks
+                        query = query.order('created_at', { ascending: false }).limit(200);
+                    }
+
+                    // Secondary sort by name
+                    if (poolId === 'DJPACKS' || poolId === 'BEATPORT') {
+                        query = query.order('name');
+                    }
+
+                    const { data: tracks } = await query;
                     // removed limit(500) to allow full folder listing if needed, or keep it if performance issue recurs.
                     // With folders indexed, we only hit this for leaf nodes. 
 
                     if (tracks && tracks.length > 0) {
-                        // Filter only files in this exact folder level
-                        const exactFiles = tracks.filter((t: any) => {
-                            if (!t.server_path) return false;
-                            const parts = t.server_path.split('/').filter(Boolean);
-                            return parts.length === prefixDepth + 1; // File directly in this folder
-                        });
+                        let tracksToShow = tracks;
 
-                        if (exactFiles.length > 0) {
-                            const mapped = exactFiles.map((item: any) => ({
+                        // Strict folder level check ONLY for DJPACKS/BEATPORT hierarchy
+                        if (poolId === 'DJPACKS' || poolId === 'BEATPORT') {
+                            tracksToShow = tracks.filter((t: any) => {
+                                if (!t.server_path) return false;
+                                const parts = t.server_path.split('/').filter(Boolean);
+                                return parts.length === prefixDepth + 1;
+                            });
+                        }
+
+                        if (tracksToShow.length > 0) {
+                            const mapped = tracksToShow.map((item: any) => ({
                                 ...item,
                                 pool_origin: item.pool_id,
                                 file_path: item.server_path,
@@ -176,10 +196,10 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                             setTrackList(mapped);
                             setCurrentLevel('tracks');
                         } else {
-                            setTrackList([]); // Found tracks but none in this exact level (maybe grand-children?)
+                            setTrackList([]);
                         }
                     } else {
-                        setTrackList([]); // No tracks found
+                        setTrackList([]);
                     }
                 }
                 setLoading(false);
@@ -192,7 +212,14 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
 
     const handleBrandClick = (brand: string) => {
         setPath([brand]);
-        setCurrentLevel('navigation');
+
+        // If it's a DJ Pool (not DJPACKS/BEATPORT/Brands), go straight to tracks view
+        // simpler navigation for pools that are just lists of tracks
+        if (brand !== 'DJPACKS' && brand !== 'BEATPORT' && brand !== 'All Brands') {
+            setCurrentLevel('tracks');
+        } else {
+            setCurrentLevel('navigation');
+        }
     };
 
     const handleFolderClick = (folder: string) => {
