@@ -74,7 +74,7 @@ export function Trends({ tracks }: TrendsProps) {
               {/* Avatar */}
               <div className="relative">
                 <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20">
-                  <img src={item.user.avatar} alt={item.user.name} className="w-full h-full object-cover" />
+                  <img src={item.user.avatar} alt={item.user.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute -bottom-1 -right-1 bg-green-500 w-2.5 h-2.5 rounded-full border-2 border-[#080808]"></div>
               </div>
@@ -82,12 +82,12 @@ export function Trends({ tracks }: TrendsProps) {
               {/* Text */}
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-bold text-gray-300">{item.user.name}</span>
-                  <span className="text-[9px] text-gray-500 uppercase font-medium">downloaded</span>
+                  <span className="text-[12px] font-bold text-gray-300">{item.user.name}</span>
+                  <span className="text-[10px] text-gray-500 uppercase font-medium">downloaded</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Download size={10} className="text-[#ff0055]" />
-                  <span className="text-[11px] font-bold text-white max-w-[150px] truncate">{item.track.title || item.track.name}</span>
+                  <span className="text-[12px] font-bold text-white max-w-[150px] truncate">{item.track.title || item.track.name}</span>
                 </div>
               </div>
             </div>

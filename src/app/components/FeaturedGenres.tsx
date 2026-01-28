@@ -33,7 +33,7 @@ export function FeaturedGenres({ onGenreSelect, activeGenre, user }: FeaturedGen
           <h2 className="text-5xl font-bold text-white mb-4 italic uppercase tracking-tighter">
             Featured <span className="text-[#ff0055]">Genres</span>
           </h2>
-          <p className="text-gray-400 text-[11px] font-bold uppercase tracking-widest">
+          <p className="text-gray-400 text-[12px] font-bold uppercase tracking-widest">
             {user ? `Filtering: ${activeGenre || 'All'}` : 'Curated for professionals'}
           </p>
         </div>

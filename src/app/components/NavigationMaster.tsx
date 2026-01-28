@@ -28,6 +28,8 @@ export function Navigation({ user, currentView, onSearch }: {
   const triggerSearch = () => {
     onSearch(searchTerm);
   };
+  const searchDialogId = 'global-search-dialog';
+  const userMenuId = 'user-menu';
 
   const links = [
     { id: 'home', name: 'Home', to: '/' },
@@ -59,7 +61,7 @@ export function Navigation({ user, currentView, onSearch }: {
         <div className="hidden lg:flex flex-1 items-center justify-center gap-6">
           {user && links.map(l => {
             const isActive = currentView === l.id;
-            const baseStyle = "text-[11px] font-black uppercase tracking-widest transition-all duration-300 relative group py-2";
+            const baseStyle = "text-[12px] font-black uppercase tracking-widest transition-all duration-300 relative group py-2";
             const activeStyle = isActive
               ? "text-[#ff0055]"
               : "text-gray-400 hover:text-white";
@@ -86,8 +88,12 @@ export function Navigation({ user, currentView, onSearch }: {
         <div className="flex items-center justify-end gap-4 z-20 w-[200px]">
           {/* BUSCADOR - Click para abrir overlay */}
           <button
+            type="button"
             onClick={() => setIsSearchOpen(true)}
             className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+            aria-label="Abrir búsqueda"
+            aria-expanded={isSearchOpen}
+            aria-controls={searchDialogId}
           >
             <Search size={18} />
           </button>
@@ -101,6 +107,10 @@ export function Navigation({ user, currentView, onSearch }: {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl"
                 onClick={() => setIsSearchOpen(false)}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Búsqueda global"
+                id={searchDialogId}
               >
                 <div
                   className="max-w-3xl mx-auto pt-32 px-6"
@@ -108,14 +118,16 @@ export function Navigation({ user, currentView, onSearch }: {
                 >
                   {/* Close button */}
                   <button
+                    type="button"
                     onClick={() => setIsSearchOpen(false)}
                     className="absolute top-6 right-6 text-gray-400 hover:text-white text-2xl"
+                    aria-label="Cerrar búsqueda"
                   >
                     ✕
                   </button>
 
                   {/* Search Input */}
-                  <div className="relative">
+                  <div className="relative" role="search">
                     <Search size={24} className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-500" />
                     <motion.input
                       initial={{ y: 20, opacity: 0 }}
@@ -123,6 +135,7 @@ export function Navigation({ user, currentView, onSearch }: {
                       autoFocus
                       type="text"
                       placeholder="Search tracks, artists, packs..."
+                      aria-label="Buscar pistas, artistas o packs"
                       className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-16 pr-6 text-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#ff0055]/50 focus:ring-2 focus:ring-[#ff0055]/20"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -150,7 +163,14 @@ export function Navigation({ user, currentView, onSearch }: {
           {/* USUARIO */}
           {user ? (
             <div className="relative">
-              <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-3 px-5 py-2.5 rounded-xl border border-white/10 bg-[#0a0a0a]">
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-3 px-5 py-2.5 rounded-xl border border-white/10 bg-[#0a0a0a]"
+                aria-haspopup="menu"
+                aria-expanded={userMenuOpen}
+                aria-controls={userMenuId}
+              >
                 <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#ff0055] to-purple-600 flex items-center justify-center">
                   <User size={12} className="text-white" />
                 </div>
@@ -159,20 +179,26 @@ export function Navigation({ user, currentView, onSearch }: {
               </button>
               <AnimatePresence>
                 {userMenuOpen && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="absolute right-0 mt-3 w-60 bg-[#111] border border-white/10 rounded-2xl p-2 shadow-2xl">
-                    <Link to="/subscription" className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 rounded-lg uppercase tracking-widest transition-colors">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute right-0 mt-3 w-60 bg-[#111] border border-white/10 rounded-2xl p-2 shadow-2xl"
+                    id={userMenuId}
+                    role="menu"
+                  >
+                    <Link to="/subscription" role="menuitem" className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 rounded-lg uppercase tracking-widest transition-colors">
                       <CreditCard size={14} /> Manage Subscription
                     </Link>
-                    <Link to="/history" className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 rounded-lg uppercase tracking-widest transition-colors">
+                    <Link to="/history" role="menuitem" className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 rounded-lg uppercase tracking-widest transition-colors">
                       <History size={14} /> Download History
                     </Link>
-                    <a href="https://t.me/+48g9AzurDo9jOTQx" target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 rounded-lg uppercase tracking-widest transition-colors">
+                    <a href="https://t.me/+48g9AzurDo9jOTQx" target="_blank" rel="noopener noreferrer" role="menuitem" className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-gray-400 hover:text-white hover:bg-white/10 rounded-lg uppercase tracking-widest transition-colors">
                       <LifeBuoy size={14} /> Support
                     </a>
 
                     <div className="h-px bg-white/5 my-1" />
 
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-red-500 hover:bg-red-500/10 rounded-lg uppercase tracking-widest">
+                    <button type="button" onClick={handleLogout} role="menuitem" className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold text-red-500 hover:bg-red-500/10 rounded-lg uppercase tracking-widest">
                       <LogOut size={14} /> Sign Out
                     </button>
                   </motion.div>
@@ -180,7 +206,7 @@ export function Navigation({ user, currentView, onSearch }: {
               </AnimatePresence>
             </div>
           ) : (
-            <button onClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })} className="px-8 py-2.5 bg-[#ff0055] text-white rounded-xl font-black text-[10px] uppercase">Login</button>
+            <button type="button" onClick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })} className="px-8 py-2.5 bg-[#ff0055] text-white rounded-xl font-black text-[10px] uppercase">Login</button>
           )}
         </div>
       </div>

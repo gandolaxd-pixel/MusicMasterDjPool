@@ -379,6 +379,8 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                                 <img
                                     src={imagePath}
                                     alt={name}
+                                    loading="lazy"
+                                    decoding="async"
                                     className={`w-full h-full transition-all duration-500 opacity-70 group-hover:opacity-100 group-hover:scale-110 ${isFullCover ? 'object-cover' : 'object-contain p-5'}`}
                                     onError={(e) => {
                                         const target = e.target as HTMLImageElement;
@@ -464,7 +466,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                                             {cleanDisplayName(folder)}
                                         </h3>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">folder</span>
+                                            <span className="text-[10px] font-black text-[#ff0055] uppercase tracking-widest">folder</span>
                                         </div>
                                     </div>
                                 </div>

@@ -2,6 +2,7 @@ import { Play, Pause, Download, Lock, X, Music2, ChevronLeft, ChevronRight } fro
 import { useMemo, useState, useEffect } from 'react';
 import { getTrackUrl } from '../../utils/urlUtils';
 import { TrackSkeleton } from './TrackSkeleton';
+import { EmptyState } from './EmptyState';
 import { usePlayer } from '../../context/PlayerContext'; // Import usePlayer
 
 const POOL_COLORS: Record<string, string> = {
@@ -75,7 +76,7 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, curr
               const isPlayingCurrent = isActive && isPlaying;
 
               return (
-                <div key={`track-${track.id}`} className={`group rounded-xl p-3 transition-all duration-300 ${isActive ? 'bg-white/10 border-l-4 shadow-[0_0_30px_rgba(0,0,0,0.5)] scale-[1.01]' : 'bg-[#0a0a0a] border-l-4 border-white/5 hover:bg-white/[0.03]'}`} style={{ borderLeftColor: isActive ? trackColor : `${trackColor}`, boxShadow: isActive ? `0 0 20px ${trackColor}20` : 'none' }}>
+                <div key={`track-${track.id}`} className={`group rounded-xl p-4 transition-all duration-300 ${isActive ? 'bg-white/10 border-l-4 shadow-[0_10px_30px_rgba(0,0,0,0.45)] scale-[1.01]' : 'bg-[#0a0a0a] border-l-4 border-white/5 hover:bg-white/[0.03]'}`} style={{ borderLeftColor: isActive ? trackColor : `${trackColor}`, boxShadow: isActive ? `0 0 20px ${trackColor}20` : 'none' }}>
                   <div className="flex items-center gap-4">
 
                     {/* Botón Play/Pausa - Uses playQueue for prev/next navigation */}
@@ -114,7 +115,7 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, curr
                           const formatColors: Record<string, string> = { 'MP3': '#ff0055', 'WAV': '#00d4ff', 'FLAC': '#ffcc00', 'AIFF': '#9d00ff', 'ZIP': '#00ff88' };
                           const formatColor = formatColors[ext] || '#ffffff';
                           return (
-                            <span className="px-3 py-1 bg-white/5 border rounded-md text-[9px] font-black uppercase tracking-widest truncate block text-center" style={{ color: formatColor, borderColor: `${formatColor}33` }}>{ext}</span>
+                            <span className="px-3 py-1 bg-white/5 border rounded-md text-[10px] font-black uppercase tracking-widest truncate block text-center" style={{ color: formatColor, borderColor: `${formatColor}33` }}>{ext}</span>
                           );
                         })()}
                       </div>
@@ -134,7 +135,12 @@ export function LatestUploads({ tracks, selectedGenre, onGenreSelect, user, curr
               );
             })
           ) : (
-            <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl"><p className="text-gray-600 font-black uppercase tracking-[0.2em] text-xs">No tracks found for this filter</p></div>
+            <EmptyState
+              title="No tracks found"
+              description={selectedGenre ? 'Prueba quitando el filtro o explorando otro pool.' : 'Ajusta tu búsqueda o vuelve más tarde.'}
+              actionLabel={selectedGenre ? 'Clear filter' : undefined}
+              onAction={selectedGenre ? () => onGenreSelect(null) : undefined}
+            />
           )}
         </div>
 

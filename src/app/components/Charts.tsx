@@ -87,7 +87,7 @@ export function Charts({ user }: { user?: any }) {
           <h2 className="text-5xl font-bold text-white mb-4 italic uppercase tracking-tighter">
             Top <span className="text-[#ff0055]">Charts</span>
           </h2>
-          <p className="text-gray-500 text-[11px] font-bold uppercase tracking-[0.3em]">
+          <p className="text-gray-500 text-[12px] font-bold uppercase tracking-[0.3em]">
             Most downloaded tracks worldwide
           </p>
         </div>
@@ -139,13 +139,13 @@ export function Charts({ user }: { user?: any }) {
                   </div>
                   
                   <div className="hidden lg:flex items-center gap-2">
-                    <span className="text-gray-600 font-black text-[9px] uppercase tracking-widest">BPM</span>
+                    <span className="text-gray-600 font-black text-[10px] uppercase tracking-widest">BPM</span>
                     <span className="text-white font-mono text-xs">{track.bpm}</span>
                   </div>
 
                   <div className="flex justify-start">
                     <span 
-                      className="px-4 py-1 bg-black border rounded-full text-[9px] font-black uppercase tracking-[0.1em]"
+                      className="px-4 py-1 bg-black border rounded-full text-[10px] font-black uppercase tracking-[0.1em]"
                       style={{ color: trackColor, borderColor: `${trackColor}33` }}
                     >
                       {track.genre}

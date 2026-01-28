@@ -14,7 +14,7 @@ export function Footer() {
               <span className="text-white">Music</span>
               <span className="text-[#ff0055]">Master</span>
             </div>
-            <p className="text-gray-500 text-[11px] font-bold uppercase tracking-widest leading-relaxed">
+            <p className="text-gray-500 text-[12px] font-bold uppercase tracking-widest leading-relaxed">
               Private professional resource curated for elite DJs worldwide.
               Access is strictly restricted to active members.
             </p>
@@ -56,7 +56,7 @@ export function Footer() {
             </p>
 
             {/* Disclaimer en color muy sutil (text-gray-800) para no llamar la atención */}
-            <p className="text-[9px] text-gray-800 font-bold uppercase leading-relaxed max-w-2xl lg:text-right">
+            <p className="text-[10px] text-gray-800 font-bold uppercase leading-relaxed max-w-2xl lg:text-right">
               All tracks are provided for promotional use and performance evaluation only.
               Unauthorized distribution or public resale is strictly prohibited.
               Music Master operates under professional DJ fair use standards.

@@ -246,9 +246,9 @@ export default function DJPacks({ onPlay, currentTrack, isPlaying, user }: DJPac
                 <div>
                   <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">{item.name}</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-black text-[#ff0055] uppercase tracking-widest">{item.type}</span>
+                    <span className="text-[10px] font-black text-[#ff0055] uppercase tracking-widest">{item.type}</span>
                     <span className="w-1 h-1 bg-gray-800 rounded-full" />
-                    <span className="text-[9px] font-bold text-gray-600 uppercase">Library Folder</span>
+                    <span className="text-[10px] font-bold text-gray-600 uppercase">Library Folder</span>
                   </div>
                 </div>
               </div>

@@ -129,12 +129,12 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
             <div className="max-w-7xl mx-auto px-4 -mt-20 relative z-20 space-y-8 pb-32">
 
                 {/* A. LIVE STATS BAR (Restored from Pro Dashboard) */}
-                <div className="flex flex-wrap items-center justify-between gap-4 bg-[#111]/90 backdrop-blur-md border border-white/10 p-4 rounded-xl shadow-2xl">
+                <div className="flex flex-wrap items-center justify-between gap-4 bg-[#111]/90 backdrop-blur-md border border-white/10 p-4 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-[#ff0055]/20 text-[#ff0055] rounded-lg animate-pulse"><Database size={18} /></div>
                         <div className="flex flex-col">
                             <span className="text-xl font-black leading-none">{formatNumber(stats.totalTracks)}</span>
-                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Total Tracks</span>
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Total Tracks</span>
                         </div>
                     </div>
                     <div className="w-px h-8 bg-white/10 hidden md:block" />
@@ -142,7 +142,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                         <div className="p-2 bg-blue-500/20 text-blue-500 rounded-lg"><Activity size={18} /></div>
                         <div className="flex flex-col">
                             <span className="text-xl font-black leading-none">{stats.addedToday}</span>
-                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Added Today</span>
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Added Today</span>
                         </div>
                     </div>
                     <div className="w-px h-8 bg-white/10 hidden md:block" />
@@ -150,7 +150,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                         <div className="p-2 bg-yellow-500/20 text-yellow-500 rounded-lg"><Clock size={18} /></div>
                         <div className="flex flex-col">
                             <span className="text-xl font-black leading-none">{stats.lastUpdate}</span>
-                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Last Update</span>
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Last Update</span>
                         </div>
                     </div>
                 </div>

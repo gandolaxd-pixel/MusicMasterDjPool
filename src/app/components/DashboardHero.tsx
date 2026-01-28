@@ -38,7 +38,7 @@ export function DashboardHero({ user }: DashboardHeroProps) {
                             </div>
                             <div>
                                 <div className="text-2xl font-black text-white leading-none">43.2k</div>
-                                <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-1">Total Tracks</div>
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Total Tracks</div>
                             </div>
                         </div>
                         <div className="w-px bg-white/5" />
@@ -48,7 +48,7 @@ export function DashboardHero({ user }: DashboardHeroProps) {
                             </div>
                             <div>
                                 <div className="text-2xl font-black text-white leading-none">128</div>
-                                <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-1">Added Today</div>
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Added Today</div>
                             </div>
                         </div>
                         <div className="w-px bg-white/5 hidden sm:block" />
@@ -58,7 +58,7 @@ export function DashboardHero({ user }: DashboardHeroProps) {
                             </div>
                             <div>
                                 <div className="text-2xl font-black text-white leading-none">2m</div>
-                                <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-1">Last Update</div>
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Last Update</div>
                             </div>
                         </div>
                     </div>
