@@ -43,5 +43,9 @@ jobs:
         run: node scripts/import_djpools_v2.js DJPOOLS/2025
         continue-on-error: true
 
+      - name: Import DJ Pools 2026
+        run: node scripts/import_djpools_v2.js DJPOOLS/2026
+        continue-on-error: true
+
       - name: Rebuild Folder Index
         run: node scripts/build_folder_index.js
