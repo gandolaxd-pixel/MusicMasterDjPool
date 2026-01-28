@@ -291,8 +291,8 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                         .select('*')
                         .eq('pool_id', poolId);
 
-                    // Only filter by folder path if we are navigating folders (DJPACKS/BEATPORT)
-                    if (poolId === 'DJPACKS' || poolId === 'BEATPORT') {
+                    // Only filter by folder path if we are navigating folders (DJPACKS/BEATPORT/SOUTH AMERICA)
+                    if (poolId === 'DJPACKS' || poolId === 'BEATPORT' || poolId === 'SOUTH AMERICA') {
                         query = query.ilike('server_path', `${folderPath}%`);
                     } else {
                         // For specific pools, just show latest tracks
@@ -300,7 +300,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                     }
 
                     // Secondary sort by name
-                    if (poolId === 'DJPACKS' || poolId === 'BEATPORT') {
+                    if (poolId === 'DJPACKS' || poolId === 'BEATPORT' || poolId === 'SOUTH AMERICA') {
                         query = query.order('name');
                     }
 
@@ -312,7 +312,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                         let tracksToShow = tracks;
 
                         // Strict folder level check ONLY for DJPACKS/BEATPORT hierarchy
-                        if (poolId === 'DJPACKS' || poolId === 'BEATPORT') {
+                        if (poolId === 'DJPACKS' || poolId === 'BEATPORT' || poolId === 'SOUTH AMERICA') {
                             tracksToShow = tracks.filter((t: any) => {
                                 if (!t.server_path) return false;
                                 const parts = t.server_path.split('/').filter(Boolean);
