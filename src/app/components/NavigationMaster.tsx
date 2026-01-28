@@ -1,4 +1,4 @@
-import { Flame, User, LogOut, ChevronDown, History, LifeBuoy, Search, CreditCard } from 'lucide-react';
+import { Flame, User, LogOut, ChevronDown, History, LifeBuoy, Search, CreditCard, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +12,7 @@ export function Navigation({ user, currentView, onSearch }: {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { signOut } = useAuth(); // Usar el hook para acceder al método del contexto
 
@@ -30,6 +31,7 @@ export function Navigation({ user, currentView, onSearch }: {
   };
   const searchDialogId = 'global-search-dialog';
   const userMenuId = 'user-menu';
+  const mobileMenuId = 'mobile-menu';
 
   const links = [
     { id: 'home', name: 'Home', to: '/' },
@@ -86,6 +88,18 @@ export function Navigation({ user, currentView, onSearch }: {
 
         {/* 3. USER ACTIONS (Flex Initial - Right Align) */}
         <div className="flex items-center justify-end gap-4 z-20 w-[200px]">
+          {user && (
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="flex lg:hidden items-center justify-center w-10 h-10 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+              aria-label="Abrir menú"
+              aria-expanded={mobileMenuOpen}
+              aria-controls={mobileMenuId}
+            >
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          )}
           {/* BUSCADOR - Click para abrir overlay */}
           <button
             type="button"
@@ -210,6 +224,36 @@ export function Navigation({ user, currentView, onSearch }: {
           )}
         </div>
       </div>
+
+      {/* MOBILE MENU */}
+      <AnimatePresence>
+        {mobileMenuOpen && user && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            id={mobileMenuId}
+            className="lg:hidden border-t border-white/5 bg-[#0a0a0a]/98 backdrop-blur-md"
+          >
+            <div className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-2 gap-2">
+              {links.map(l => {
+                const isActive = currentView === l.id;
+                const linkClass = `px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-colors ${isActive ? 'bg-[#ff0055]/10 text-[#ff0055]' : 'text-gray-300 hover:bg-white/5 hover:text-white'}`;
+
+                return l.to ? (
+                  <Link key={l.name} to={l.to} onClick={() => setMobileMenuOpen(false)} className={linkClass}>
+                    {l.name}
+                  </Link>
+                ) : (
+                  <a key={l.name} href={l.href} onClick={() => setMobileMenuOpen(false)} className={linkClass}>
+                    {l.name}
+                  </a>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }
