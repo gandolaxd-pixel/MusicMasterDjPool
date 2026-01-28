@@ -89,18 +89,110 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
                 setLoading(true);
                 const brand = path[0];
 
+                // Determine pool_id based on current brand
+                let poolId = 'BEATPORT';
+                if (brand === 'DJPACKS') poolId = 'DJPACKS';
+                else if (brand === 'BEATPORT') poolId = 'BEATPORT';
+                else poolId = brand;
+
+                // --- VIRTUAL NAVIGATION FOR DJ POOLS (Club Killers, etc) ---
+                if (poolId !== 'DJPACKS' && poolId !== 'BEATPORT') {
+                    // Level 1: Years (Root)
+                    if (path.length === 1) {
+                        // Check which years exist for this pool
+                        // We can assume 2025 and 2026 exist for now or check one track
+                        setFolderItems(['2026', '2025']);
+                        setTrackList([]);
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Level 2: Months (passed Year)
+                    if (path.length === 2) {
+                        const year = path[1];
+                        // Get distinct months for this pool and year
+                        const { data } = await supabase
+                            .from('dj_tracks')
+                            .select('drop_month')
+                            .eq('pool_id', poolId)
+                            .ilike('original_folder', `%/${year}/%`)
+                            .order('drop_month'); // Sorting might need manual helper
+
+                        if (data) {
+                            const monthMap: { [key: string]: number } = { 'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6, 'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12 };
+                            const uniqueMonths = Array.from(new Set(data.filter(d => d.drop_month).map(d => d.drop_month)))
+                                .sort((a, b) => (monthMap[a] || 99) - (monthMap[b] || 99));
+                            setFolderItems(uniqueMonths);
+                            setTrackList([]);
+                        }
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Level 3: Days (passed Month)
+                    if (path.length === 3) {
+                        const year = path[1];
+                        const month = path[2];
+
+                        const { data } = await supabase
+                            .from('dj_tracks')
+                            .select('drop_day')
+                            .eq('pool_id', poolId)
+                            .ilike('original_folder', `%/${year}/%`)
+                            .eq('drop_month', month)
+                            .order('drop_day', { ascending: true });
+
+                        if (data) {
+                            const uniqueDays = Array.from(new Set(data.map(d => d.drop_day?.toString()))).filter(Boolean).sort((a, b) => parseInt(a!) - parseInt(b!));
+                            setFolderItems(uniqueDays);
+                            setTrackList([]);
+                        }
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Level 4: Tracks (passed Day)
+                    if (path.length === 4) {
+                        const year = path[1];
+                        const month = path[2];
+                        const day = parseInt(path[3]);
+
+                        const { data: tracks } = await supabase
+                            .from('dj_tracks')
+                            .select('*')
+                            .eq('pool_id', poolId)
+                            .ilike('original_folder', `%/${year}/%`)
+                            .eq('drop_month', month)
+                            .eq('drop_day', day)
+                            .order('name');
+
+                        if (tracks) {
+                            const mapped = tracks.map((item: any) => ({
+                                ...item,
+                                pool_origin: item.pool_id,
+                                file_path: item.server_path,
+                                title: item.title || item.name,
+                            }));
+                            setTrackList(mapped);
+                            setFolderItems([]);
+                            setCurrentLevel('tracks');
+                        }
+                        setLoading(false);
+                        return;
+                    }
+                }
+
+                // --- EXISTING LOGIC FOR DJPACKS / BEATPORT (Indexed Folders) ---
+
                 let searchPrefix = '';
                 if (brand === 'Beatport') {
-                    // Start at root '/' to allow selecting BEATPORT2025, BEATPORT2026, etc.
                     const subPath = path.slice(1).join('/');
                     searchPrefix = `/${subPath ? subPath + '/' : ''}`;
                 } else if (brand === 'DJPACKS') {
-                    // DJPACKS: use /DJPACKS/... path structure
                     searchPrefix = `/${path.join('/')}`;
                 } else {
-                    // Default behavior for others
                     searchPrefix = `/${path.join('/')}`;
-                }      // Define prefixDepth for later use
+                }
                 const prefixDepth = searchPrefix.split('/').filter(Boolean).length;
 
                 // 🚀 SUPER FAST INDEXED NAVIGATION (10TB Scale)
@@ -212,14 +304,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool }) => {
 
     const handleBrandClick = (brand: string) => {
         setPath([brand]);
-
-        // If it's a DJ Pool (not DJPACKS/BEATPORT/Brands), go straight to tracks view
-        // simpler navigation for pools that are just lists of tracks
-        if (brand !== 'DJPACKS' && brand !== 'BEATPORT' && brand !== 'All Brands') {
-            setCurrentLevel('tracks');
-        } else {
-            setCurrentLevel('navigation');
-        }
+        setCurrentLevel('navigation');
     };
 
     const handleFolderClick = (folder: string) => {
