@@ -206,9 +206,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         const { data: { user }, error } = await supabase.auth.getUser(token);
         if (error || !user) throw new Error('Invalid token');
+
+        // 🔒 CHECK SUBSCRIPTION STATUS
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('subscription_status')
+            .eq('id', user.id)
+            .single();
+
+        const isActive = profile?.subscription_status === 'active' || profile?.subscription_status === 'trialing';
+
+        if (!isActive) {
+            console.error(`⛔ ALERTA: Usuario ${user.email} intentó descargar sin suscripción activa.`);
+            return res.status(403).json({ error: 'Subscription Required: Please upgrade your plan to download.' });
+        }
+
     } catch (error) {
-        console.error("Auth Fail in Vercel:", error);
-        return res.status(403).json({ error: 'Unauthorized: Invalid token' });
+        console.error("Auth/Sub Fail in Vercel:", error);
+        return res.status(403).json({ error: 'Unauthorized: Invalid token or subscription' });
     }
 
     if (!STORAGE_CONFIG.user || !STORAGE_CONFIG.pass) {
