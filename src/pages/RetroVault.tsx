@@ -12,20 +12,32 @@ interface RetroVaultProps {
 export const RetroVault: React.FC<RetroVaultProps> = ({ realTracks, user }) => {
     const { playTrack, currentTrack, isPlaying } = usePlayer();
     const { crate, toggleCrate } = useCrate();
+    const [retroTracks, setRetroTracks] = React.useState<any[]>([]);
+    const [loading, setLoading] = React.useState(true);
 
-    const retroTracks = useMemo(() => {
-        const keywords = ['80s', '90s', '00s', 'old school', 'retro', 'classic', 'back in the day', 'throwback'];
-        if (!realTracks) return [];
-        return realTracks.filter(t => {
-            // Safeguard against missing properties
-            const title = t.title || '';
-            const artist = t.artist || '';
-            const path = t.file_path || t.filename || ''; // Changed t.path to t.file_path
+    React.useEffect(() => {
+        const fetchRetro = async () => {
+            const { supabase } = await import('../supabase');
+            const { data } = await supabase
+                .from('dj_tracks')
+                .select('*')
+                .eq('pool_id', 'RETRO_VAULT')
+                .order('name')
+                .limit(500); // Initial limit, maybe implementing pagination or folder nav later
 
-            const text = (title + artist + path).toLowerCase();
-            return keywords.some(k => text.includes(k));
-        });
-    }, [realTracks]);
+            if (data) {
+                const mapped = data.map((item: any) => ({
+                    ...item,
+                    pool_origin: 'RETRO_VAULT',
+                    file_path: item.server_path,
+                    title: item.title || item.name,
+                }));
+                setRetroTracks(mapped);
+            }
+            setLoading(false);
+        };
+        fetchRetro();
+    }, []);
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-20">
@@ -47,19 +59,25 @@ export const RetroVault: React.FC<RetroVaultProps> = ({ realTracks, user }) => {
                 <div className="h-px bg-white/5 w-full" />
             </div>
 
-            {/* Content using Standard List Component */}
+            {/* Content */}
             <section>
-                <LatestUploads
-                    tracks={retroTracks}
-                    selectedGenre={null}
-                    onGenreSelect={() => { }}
-                    onToggleCrate={toggleCrate}
-                    crate={crate}
-                    user={user}
-                    onPlay={playTrack}
-                    currentTrack={currentTrack}
-                    isPlaying={isPlaying}
-                />
+                {loading ? (
+                    <div className="py-20 text-center text-gray-500 animate-pulse uppercase tracking-widest text-xs font-bold">
+                        Loading Retro Collection...
+                    </div>
+                ) : (
+                    <LatestUploads
+                        tracks={retroTracks}
+                        selectedGenre={null}
+                        onGenreSelect={() => { }}
+                        onToggleCrate={toggleCrate}
+                        crate={crate}
+                        user={user}
+                        onPlay={playTrack}
+                        currentTrack={currentTrack}
+                        isPlaying={isPlaying}
+                    />
+                )}
             </section>
         </div>
     );
