@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../../supabase';
-import { Disc, ArrowLeft, Folder, Home, ChevronRight } from 'lucide-react';
+import { Disc, ArrowLeft, Folder, Home, ChevronRight, FolderOpen, Music, Loader2 } from 'lucide-react';
 import { usePlayer } from '../../context/PlayerContext';
 import { useCrate } from '../../context/CrateContext';
 import { useAuth } from '../../context/AuthContext';
@@ -13,7 +13,6 @@ interface PoolGridProps {
     overridePoolId?: string;
 }
 
-// BUILD: 2026-01-29-v2 - Force browser reload
 const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
     // Navigation State - supports unlimited depth
     const [path, setPath] = useState<string[]>(initialPool ? [initialPool] : []);
@@ -190,7 +189,6 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                         : path;
                     const relativePath = pathWithoutBrand.join('/');
                     searchPrefix = `/${relativePath}`;
-                    console.log('[RETRO_VAULT] path:', path, '-> searchPrefix:', searchPrefix);
                 }
                 else if (brandUpper === 'DJPACKS') {
                     // Custom mapping for SOUTH AMERICA
@@ -239,8 +237,6 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                     console.error('Error fetching folders:', folderError);
                 }
 
-                console.log('[DEBUG] cachedFolders:', cachedFolders?.length, 'parentPathToQuery:', parentPathToQuery);
-                
                 if (cachedFolders && cachedFolders.length > 0) {
                     cachedFolders.forEach(f => folderSet.add(f.name));
                 } else {
@@ -256,7 +252,6 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
 
                     // Buscar tracks directamente con ILIKE
                     const searchPattern = searchPrefix + '%';
-                    console.log('[DEBUG] Buscando tracks, pool:', trackPoolId, 'pattern:', searchPattern);
                     
                     const { data: directTracks, error: tracksError } = await supabase
                         .from('dj_tracks')
@@ -265,8 +260,6 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                         .ilike('server_path', searchPattern)
                         .order('name')
                         .limit(500);
-
-                    console.log('[DEBUG] directTracks:', directTracks?.length, 'error:', tracksError);
 
                     if (directTracks && directTracks.length > 0) {
                         const mapped = directTracks.map((item: any) => ({
@@ -280,8 +273,6 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                         setCurrentLevel('tracks');
                         setLoading(false);
                         return;
-                    } else {
-                        console.log('[DEBUG] No tracks found! Showing empty state');
                     }
                 }
 
@@ -332,7 +323,6 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
 
                     // Buscar tracks con ILIKE (funciona con paths URL-encoded)
                     const searchPattern = folderPath + '%';
-                    console.log('[DEBUG Fallback] pool:', trackPoolId, 'pattern:', searchPattern);
                     
                     const { data: tracks, error: tracksError } = await supabase
                         .from('dj_tracks')
@@ -341,12 +331,6 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                         .ilike('server_path', searchPattern)
                         .order('name')
                         .limit(500);
-
-                    if (tracksError) {
-                        console.error('Error fetching tracks:', tracksError);
-                    }
-                    
-                    console.log('[DEBUG Fallback] tracks found:', tracks?.length);
 
                     if (tracks && tracks.length > 0) {
                         // Filtrar solo archivos del nivel actual (no de subcarpetas)
@@ -379,7 +363,6 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                         }
                     } else {
                         setTrackList([]);
-                        console.log('No tracks found for path:', folderPath, 'poolId:', trackPoolId);
                     }
                 }
                 setLoading(false);
@@ -390,47 +373,44 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
 
     // --- NAVIGATION HANDLERS ---
 
-    const handleBrandClick = (brand: string) => {
+    const handleBrandClick = useCallback((brand: string) => {
         setPath([brand]);
         setCurrentLevel('navigation');
-    };
+    }, []);
 
-    const handleFolderClick = (folder: string) => {
-        setPath([...path, folder]);
-    };
+    const handleFolderClick = useCallback((folder: string) => {
+        setPath(prev => [...prev, folder]);
+    }, []);
 
-    const handleBack = () => {
-        if (path.length <= 1) {
-            setPath([]);
-            setCurrentLevel('brands');
-        } else {
-            const newPath = [...path];
-            newPath.pop();
-            setPath(newPath);
-            if (currentLevel === 'tracks') {
-                setCurrentLevel('navigation');
+    const handleBack = useCallback(() => {
+        setPath(prev => {
+            if (prev.length <= 1) {
+                setCurrentLevel('brands');
+                return [];
+            } else {
+                setCurrentLevel(curr => curr === 'tracks' ? 'navigation' : curr);
+                return prev.slice(0, -1);
             }
-        }
-    };
+        });
+    }, []);
 
-    const goHome = () => {
+    const goHome = useCallback(() => {
         setPath([]);
         setCurrentLevel('brands');
         setFolderItems([]);
         setTrackList([]);
-    };
+    }, []);
 
     // --- RENDERERS ---
 
-    const cleanDisplayName = (name: string) => {
+    const cleanDisplayName = useCallback((name: string) => {
         if (!name) return '';
         try {
-            // Only decode URI components, NO removing branding
             return decodeURIComponent(name).trim();
-        } catch (e) {
+        } catch {
             return name;
         }
-    };
+    }, []);
 
     if (currentLevel === 'brands') {
         return (
@@ -453,7 +433,8 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                             <button
                                 key={name}
                                 onClick={() => handleBrandClick(name)}
-                                className="group aspect-square bg-[#0a0a0a] border border-white/10 rounded-3xl flex items-center justify-center overflow-hidden transition-all duration-500 hover:border-[#ff0055] hover:shadow-[0_0_35px_rgba(255,0,85,0.35)]"
+                                aria-label={`Open ${name} pool`}
+                                className="group aspect-square bg-[#0a0a0a] border border-white/10 rounded-3xl flex items-center justify-center overflow-hidden transition-all duration-500 hover:border-[#ff0055] hover:shadow-[0_0_35px_rgba(255,0,85,0.35)] focus:outline-none focus:ring-2 focus:ring-[#ff0055] focus:ring-offset-2 focus:ring-offset-black"
                             >
                                 <img
                                     src={imagePath}
@@ -486,7 +467,11 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
             <div className="flex items-center gap-2 px-4 overflow-x-auto py-2 border-b border-white/5 pb-6">
                 {/* Hide home button when using initialPool (no brands view to return to) */}
                 {!initialPool && (
-                    <button onClick={goHome} className="p-2 hover:bg-white/5 rounded-lg text-gray-500 transition-colors">
+                    <button 
+                        onClick={goHome} 
+                        aria-label="Go to home"
+                        className="p-2 hover:bg-white/5 rounded-lg text-gray-500 transition-colors focus:outline-none focus:ring-2 focus:ring-[#ff0055]"
+                    >
                         <Home size={18} />
                     </button>
                 )}
@@ -499,7 +484,9 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                                 setPath(newPath);
                                 setCurrentLevel('navigation');
                             }}
-                            className={`text-[10px] font-black uppercase tracking-[0.2em] ${i === path.length - 1 ? 'text-[#ff0055]' : 'text-gray-600 hover:text-gray-400'}`}
+                            aria-label={`Navigate to ${cleanDisplayName(p)}`}
+                            aria-current={i === path.length - 1 ? 'page' : undefined}
+                            className={`text-[10px] font-black uppercase tracking-[0.2em] focus:outline-none focus:underline ${i === path.length - 1 ? 'text-[#ff0055]' : 'text-gray-600 hover:text-gray-400'}`}
                         >
                             {cleanDisplayName(p)}
                         </button>
@@ -512,7 +499,11 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                 <div className="flex items-center gap-4">
                     {/* Hide back button at root level when using initialPool */}
                     {!(initialPool && path.length === 1) && (
-                        <button onClick={handleBack} className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl">
+                        <button 
+                            onClick={handleBack} 
+                            aria-label="Go back"
+                            className="p-3 rounded-full border border-white/10 hover:bg-[#ff0055] hover:border-[#ff0055] transition-all group shadow-2xl focus:outline-none focus:ring-2 focus:ring-[#ff0055]"
+                        >
                             <ArrowLeft size={20} className="group-hover:scale-110 text-white" />
                         </button>
                     )}
@@ -527,17 +518,22 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
             {currentLevel === 'navigation' && (
                 <div className="flex flex-col gap-2 px-4">
                     {loading ? (
-                        <div className="py-20 text-center text-gray-600 font-black text-[10px] uppercase animate-pulse tracking-widest">Loading...</div>
+                        <div className="py-16 flex flex-col items-center justify-center gap-4">
+                            <Loader2 size={32} className="text-[#ff0055] animate-spin" />
+                            <span className="text-gray-500 text-xs font-medium uppercase tracking-widest">Loading folders...</span>
+                        </div>
                     ) : folderItems.length > 0 ? (
                         folderItems.map((folder) => (
-                            <div
+                            <button
                                 key={folder}
                                 onClick={() => handleFolderClick(folder)}
-                                className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all"
+                                onKeyDown={(e) => e.key === 'Enter' && handleFolderClick(folder)}
+                                aria-label={`Open folder ${cleanDisplayName(folder)}`}
+                                className="group flex items-center justify-between bg-[#0a0a0a] border-l-4 border-white/5 p-4 rounded-xl cursor-pointer hover:border-[#ff0055]/50 hover:bg-[#121212] transition-all w-full text-left focus:outline-none focus:ring-2 focus:ring-[#ff0055] focus:ring-inset"
                             >
                                 <div className="flex items-center gap-5">
                                     <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/[0.03] border border-white/5 transition-colors text-gray-600 group-hover:text-[#ff0055]">
-                                        <Folder size={22} />
+                                        <Folder size={22} aria-hidden="true" />
                                     </div>
                                     <div>
                                         <h3 className="text-sm font-bold text-gray-200 group-hover:text-white uppercase truncate max-w-[200px] md:max-w-md">
@@ -548,11 +544,20 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors"><Folder size={18} /></div>
-                            </div>
+                                <div className="p-2 text-gray-800 group-hover:text-[#ff0055] transition-colors" aria-hidden="true"><Folder size={18} /></div>
+                            </button>
                         ))
                     ) : (
-                        <p className="text-gray-500 py-10 text-center">No folders found at this level.</p>
+                        <div className="py-16 flex flex-col items-center justify-center gap-4">
+                            <FolderOpen size={48} className="text-gray-700" />
+                            <p className="text-gray-500 text-sm">No folders found at this level</p>
+                            <button 
+                                onClick={handleBack}
+                                className="text-[#ff0055] text-xs font-medium hover:underline"
+                            >
+                                Go back
+                            </button>
+                        </div>
                     )}
                 </div>
             )}
@@ -561,7 +566,10 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
             {currentLevel === 'tracks' && (
                 <div className="px-4">
                     {loading ? (
-                        <div className="text-white">Loading tracks...</div>
+                        <div className="py-16 flex flex-col items-center justify-center gap-4">
+                            <Loader2 size={32} className="text-[#ff0055] animate-spin" />
+                            <span className="text-gray-500 text-xs font-medium uppercase tracking-widest">Loading tracks...</span>
+                        </div>
                     ) : trackList.length > 0 ? (
                         <LatestUploads
                             tracks={trackList}
@@ -575,7 +583,16 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                             crate={crate}
                         />
                     ) : (
-                        <p className="text-gray-500 py-10 text-center">No tracks found in this folder.</p>
+                        <div className="py-16 flex flex-col items-center justify-center gap-4">
+                            <Music size={48} className="text-gray-700" />
+                            <p className="text-gray-500 text-sm">No tracks found in this folder</p>
+                            <button 
+                                onClick={handleBack}
+                                className="text-[#ff0055] text-xs font-medium hover:underline"
+                            >
+                                Go back
+                            </button>
+                        </div>
                     )}
                 </div>
             )}
