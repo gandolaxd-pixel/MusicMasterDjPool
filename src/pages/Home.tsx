@@ -95,14 +95,22 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
         }
 
         try {
-            const { supabase } = await import('../supabase');
-            // Use 'tracks' table for consistency (migrated data)
-            const folderPath = featuredPack.original_folder || featuredPack.folder;
+            // Get pack's folder path to find tracks inside
+            const packFolder = featuredPack.original_folder || featuredPack.server_path;
+            
+            if (!packFolder) {
+                console.warn("No folder path found for pack");
+                return;
+            }
+
+            // Search for tracks that are inside this pack's folder
             const { data } = await supabase
-                .from('tracks')
+                .from('dj_tracks')
                 .select('*')
-                .eq('folder', folderPath)
-                .limit(50); // Get tracks for the queue
+                .eq('pool_id', 'DJPACKS')
+                .ilike('server_path', `${packFolder}/%`)
+                .neq('format', 'pack')
+                .limit(50);
 
             if (data && data.length > 0) {
                 // Map to player track format
@@ -110,6 +118,7 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                     ...song,
                     title: song.title || song.name,
                     file_path: song.file_path || song.server_path,
+                    pool_origin: 'DJPACKS'
                 }));
                 playQueue(queue);
             } else {

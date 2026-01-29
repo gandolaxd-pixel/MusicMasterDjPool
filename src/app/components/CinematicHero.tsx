@@ -21,8 +21,9 @@ export function CinematicHero({ onPlay, pack, loading }: CinematicHeroProps) {
     const secondPart = titleParts.slice(Math.ceil(titleParts.length / 2)).join(' ');
 
     const handleViewPack = () => {
-        if (pack && pack.original_folder) {
-            navigate(`/packs?folder=${encodeURIComponent(pack.original_folder)}`);
+        const packFolder = pack?.original_folder || pack?.server_path;
+        if (pack && packFolder) {
+            navigate(`/packs?folder=${encodeURIComponent(packFolder)}`);
         } else {
             navigate('/packs');
         }
