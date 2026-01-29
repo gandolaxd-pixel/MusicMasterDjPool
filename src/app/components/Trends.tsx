@@ -1,5 +1,6 @@
 import { Zap, Download } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
+import { motion, useAnimationControls } from 'framer-motion';
 
 // Fake User Database
 const FAKE_USERS = [
@@ -22,6 +23,8 @@ interface TrendsProps {
 }
 
 export function Trends({ tracks }: TrendsProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const controls = useAnimationControls();
 
   // Generate fake activity feed based on real tracks
   const activities = useMemo(() => {
@@ -49,6 +52,38 @@ export function Trends({ tracks }: TrendsProps) {
   // Duplicamos para el efecto marquee infinito
   const marqueeItems = [...displayItems, ...displayItems];
 
+  // Start infinite animation
+  useEffect(() => {
+    const startAnimation = async () => {
+      await controls.start({
+        x: "-50%",
+        transition: {
+          duration: 40,
+          ease: "linear",
+          repeat: Infinity,
+          repeatType: "loop"
+        }
+      });
+    };
+    startAnimation();
+  }, [controls]);
+
+  const handleMouseEnter = () => {
+    controls.stop();
+  };
+
+  const handleMouseLeave = () => {
+    controls.start({
+      x: "-50%",
+      transition: {
+        duration: 40,
+        ease: "linear",
+        repeat: Infinity,
+        repeatType: "loop"
+      }
+    });
+  };
+
   return (
     <section className="relative w-full bg-[#080808] border-y border-white/5 py-4 mt-6 mb-8 overflow-hidden">
 
@@ -64,8 +99,14 @@ export function Trends({ tracks }: TrendsProps) {
       </div>
 
       {/* Contenedor Marquee */}
-      <div className="flex overflow-hidden">
-        <div className="flex animate-marquee items-center gap-12 pl-48 hover:pause-marquee">
+      <div ref={containerRef} className="flex overflow-hidden">
+        <motion.div 
+          className="flex items-center gap-12 pl-48"
+          animate={controls}
+          initial={{ x: 0 }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
           {marqueeItems.map((item, index) => (
             <div
               key={`${item.id}-${index}`}
@@ -92,21 +133,8 @@ export function Trends({ tracks }: TrendsProps) {
               </div>
             </div>
           ))}
-        </div>
+        </motion.div>
       </div>
-
-      <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-marquee {
-          animation: marquee 60s linear infinite;
-        }
-        .animate-marquee:hover {
-          animation-play-state: paused;
-        }
-      `}</style>
     </section>
   );
 }
