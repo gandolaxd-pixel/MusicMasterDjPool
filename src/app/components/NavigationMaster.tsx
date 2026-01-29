@@ -38,7 +38,7 @@ export function Navigation({ user, currentView, onSearch }: {
     { id: 'pools', name: 'DJ Pools', to: '/pools' },
     { id: 'packs', name: 'DJ Packs', to: '/packs' },
     { id: 'retro', name: 'Retro Vault', to: '/retro' },
-    { id: 'categories', name: 'Categories', to: '/categories' },
+    { id: 'categories', name: 'FTP', to: '/categories' },
     { id: 'latest', name: 'Latest', href: '/#latest' },
     { id: 'charts', name: 'Charts', href: '/#charts' },
   ];
