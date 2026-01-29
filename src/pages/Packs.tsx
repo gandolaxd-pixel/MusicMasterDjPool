@@ -39,13 +39,13 @@ export const PacksPage: React.FC<PacksPageProps> = () => {
                 const parts = folderParam.split('/').filter(Boolean);
                 setPackName(parts[parts.length - 1] || 'Pack');
 
-                // Search for tracks inside this folder
+                // Search for audio tracks inside this folder
                 const { data } = await supabase
                     .from('dj_tracks')
                     .select('*')
                     .eq('pool_id', 'DJPACKS')
                     .ilike('server_path', `${folderParam}/%`)
-                    .neq('format', 'pack')
+                    .or('name.ilike.%.mp3,name.ilike.%.wav,name.ilike.%.flac,name.ilike.%.aiff,name.ilike.%.m4a')
                     .order('name')
                     .limit(200);
 

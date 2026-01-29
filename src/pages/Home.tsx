@@ -103,13 +103,13 @@ export const HomePage: React.FC<HomePageProps> = ({ user, realTracks, selectedGe
                 return;
             }
 
-            // Search for tracks that are inside this pack's folder
+            // Search for tracks that are inside this pack's folder (audio files only)
             const { data } = await supabase
                 .from('dj_tracks')
                 .select('*')
                 .eq('pool_id', 'DJPACKS')
                 .ilike('server_path', `${packFolder}/%`)
-                .neq('format', 'pack')
+                .or('name.ilike.%.mp3,name.ilike.%.wav,name.ilike.%.flac,name.ilike.%.aiff,name.ilike.%.m4a')
                 .limit(50);
 
             if (data && data.length > 0) {

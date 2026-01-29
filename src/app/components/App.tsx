@@ -71,25 +71,41 @@ const AppContent = () => {
           setRealTracks(mappedTracks);
         }
 
-        // Fetch Featured Pack - Random pack from DJPACKS
-        const { count: packCount } = await supabase
+        // Fetch Featured Pack - Get unique pack folders from DJPACKS
+        const { data: djpacksTracks } = await supabase
           .from('dj_tracks')
-          .select('*', { count: 'exact', head: true })
+          .select('server_path, original_folder')
           .eq('pool_id', 'DJPACKS')
-          .eq('format', 'pack');
+          .limit(1000);
 
-        if (packCount && packCount > 0) {
-          // Get a random offset
-          const randomOffset = Math.floor(Math.random() * Math.min(packCount, 100));
-          const { data: randomPack } = await supabase
-            .from('dj_tracks')
-            .select('*')
-            .eq('pool_id', 'DJPACKS')
-            .eq('format', 'pack')
-            .range(randomOffset, randomOffset);
+        if (djpacksTracks && djpacksTracks.length > 0) {
+          // Extract unique root folders (pack names)
+          const packFolders = new Map<string, string>();
+          djpacksTracks.forEach((t: any) => {
+            const path = t.server_path || t.original_folder || '';
+            const parts = path.split('/').filter(Boolean);
+            if (parts.length >= 1) {
+              const packName = parts[0];
+              // Store pack name -> full folder path
+              if (!packFolders.has(packName)) {
+                packFolders.set(packName, '/' + packName);
+              }
+            }
+          });
 
-          if (randomPack && randomPack.length > 0) {
-            setFeaturedPack(randomPack[0]);
+          const packArray = Array.from(packFolders.entries());
+          if (packArray.length > 0) {
+            // Pick a random pack
+            const randomIndex = Math.floor(Math.random() * packArray.length);
+            const [packName, packPath] = packArray[randomIndex];
+            
+            setFeaturedPack({
+              name: decodeURIComponent(packName),
+              title: decodeURIComponent(packName),
+              server_path: packPath,
+              original_folder: packPath,
+              pool_id: 'DJPACKS'
+            });
           }
         }
       } catch (e) {
