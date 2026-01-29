@@ -50,7 +50,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({ user }) => {
         }, 350);
 
         return () => window.clearTimeout(timeoutId);
-    }, [query, resetSearch, search]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [query]); // Only re-run when query changes, functions are stable
 
     return (
         <section className="space-y-12 animate-in fade-in duration-500">

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Track } from '../types';
 
 
@@ -26,7 +26,7 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const search = async (term: string, page: number = 1) => {
+    const search = useCallback(async (term: string, page: number = 1) => {
         if (!term.trim()) return;
 
         setLoading(true);
@@ -34,32 +34,31 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (page === 1) setLastSearchTerm(term);
 
         try {
-            // ✅ Búsqueda directa en Supabase (tabla dj_tracks)
+            // Búsqueda directa en Supabase (tabla dj_tracks)
             const { supabase } = await import('../supabase');
 
             // Usamos ilike para búsqueda insensible a mayúsculas
             const { data, error, count } = await supabase
-                .from('dj_tracks') // Tabla principal con toda la música
+                .from('dj_tracks')
                 .select('*', { count: 'exact' })
                 .ilike('name', `%${term}%`)
-                .range((page - 1) * 50, page * 50 - 1); // Paginación de 50 en 50
+                .range((page - 1) * 50, page * 50 - 1);
 
             if (error) throw error;
 
             const rawResults = data || [];
 
-            // Normalize DB results to Frontend properties (name vs title)
+            // Normalize DB results to Frontend properties
             const results = rawResults.map((t: any) => ({
                 ...t,
-                name: t.title || t.name || 'Unknown', // Frontend uses 'name'
+                name: t.title || t.name || 'Unknown',
                 artist: t.artist || 'Unknown Artist',
                 file_path: t.file_path,
-                // Ensure ID presence
                 id: t.id
             }));
 
             setServerPage(page);
-            setHasMore(rawResults.length === 50); // Si trae 50, asumimos quiza hay más
+            setHasMore(rawResults.length === 50);
             setTotalServerTracks(count || 0);
 
             if (page === 1) {
@@ -74,22 +73,27 @@ export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const loadMore = async () => {
+    const loadMore = useCallback(async () => {
         if (hasMore && !loading) {
-            await search(lastSearchTerm, serverPage + 1);
+            setServerPage(prev => {
+                const nextPage = prev + 1;
+                // Use lastSearchTerm from closure, search with next page
+                search(lastSearchTerm, nextPage);
+                return nextPage;
+            });
         }
-    };
+    }, [hasMore, loading, lastSearchTerm, search]);
 
-    const resetSearch = () => {
+    const resetSearch = useCallback(() => {
         setServerTracks([]);
         setTotalServerTracks(0);
         setHasMore(true);
         setServerPage(1);
         setLastSearchTerm('');
         setError(null);
-    };
+    }, []);
 
     return (
         <SearchContext.Provider value={{
