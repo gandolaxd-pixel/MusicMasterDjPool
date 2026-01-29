@@ -6,7 +6,7 @@ import { useCrate } from '../../context/CrateContext';
 import { useAuth } from '../../context/AuthContext';
 import { LatestUploads } from './LatestUploads';
 
-import { SPECIAL_NAMES, MONTH_MAP } from '../../constants/poolData';
+import { SPECIAL_NAMES, MONTH_MAP, POOL_ID_MAP } from '../../constants/poolData';
 
 interface PoolGridProps {
     initialPool?: string;
@@ -63,6 +63,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                 const brand = path[0];
 
                 // Determine pool_id based on current brand or override
+                // Use POOL_ID_MAP to translate UI names to actual database pool_ids
                 let poolId = 'BEATPORT';
                 if (overridePoolId) poolId = overridePoolId;
                 else if (brand === 'DJPACKS') {
@@ -70,7 +71,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                     else poolId = 'DJPACKS';
                 }
                 else if (brand === 'BEATPORT') poolId = 'BEATPORT';
-                else poolId = brand;
+                else poolId = POOL_ID_MAP[brand] || brand; // Map UI name to pool_id
 
                 // --- VIRTUAL NAVIGATION FOR DJ POOLS (Club Killers, DDP, etc) ---
                 // Estos pools NO usan dj_folders, navegan por drop_month/drop_day

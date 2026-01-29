@@ -67,3 +67,15 @@ export const MONTH_MAP: { [key: string]: number } = {
     'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6,
     'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12
 };
+
+// Map UI display names to actual pool_id in database
+export const POOL_ID_MAP: Record<string, string> = {
+    "Beatport": "BEATPORT",
+    "Digital DJ Pool": "DDP",
+    "Traxsource New Releases": "Traxsource",
+    "Beat Junkies": "BeatJunkies",
+    "My Mp3 Pool": "MyMP3Pool",
+    "Direct Music Service": "DMS",
+    "Spinback Promos": "Spin Back Promos  12 JAN",
+    "Spin Back Promos": "Spin Back Promos  12 JAN",
+};
