@@ -65,12 +65,14 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                 // Determine pool_id based on current brand or override
                 // Use POOL_ID_MAP to translate UI names to actual database pool_ids
                 let poolId = 'BEATPORT';
+                const brandUpper = brand.toUpperCase();
+                
                 if (overridePoolId) poolId = overridePoolId;
-                else if (brand === 'DJPACKS') {
+                else if (brandUpper === 'DJPACKS') {
                     if (path.includes('SOUTH AMERICA DJ PACKS')) poolId = 'SOUTH AMERICA';
                     else poolId = 'DJPACKS';
                 }
-                else if (brand === 'BEATPORT') poolId = 'BEATPORT';
+                else if (brandUpper === 'BEATPORT') poolId = 'BEATPORT';
                 else poolId = POOL_ID_MAP[brand] || brand; // Map UI name to pool_id
 
                 // --- VIRTUAL NAVIGATION FOR DJ POOLS (Club Killers, DDP, etc) ---
@@ -171,7 +173,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                 let searchPrefix = '';
 
                 // BEATPORT: Mostrar años primero
-                if (brand === 'BEATPORT' && path.length === 1) {
+                if (brandUpper === 'BEATPORT' && path.length === 1) {
                     // Nivel raíz de BEATPORT -> mostrar años disponibles
                     setFolderItems(['2026', '2025']);
                     setTrackList([]);
@@ -190,7 +192,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                     searchPrefix = `/${relativePath}`;
                     console.log('[RETRO_VAULT] path:', path, '-> searchPrefix:', searchPrefix);
                 }
-                else if (brand === 'DJPACKS') {
+                else if (brandUpper === 'DJPACKS') {
                     // Custom mapping for SOUTH AMERICA
                     if (path.includes('SOUTH AMERICA DJ PACKS')) {
                         const relativePath = path.slice(path.indexOf('SOUTH AMERICA DJ PACKS') + 1).join('/');
@@ -199,7 +201,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                         searchPrefix = `/${path.join('/')}`;
                     }
                 }
-                else if (brand === 'BEATPORT' && path.length > 1) {
+                else if (brandUpper === 'BEATPORT' && path.length > 1) {
                     // BEATPORT 2025 structure is /BEATPORT2025 not /BEATPORT/2025
                     const year = path[1];
                     const rest = path.slice(2);
@@ -246,9 +248,9 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                     let trackPoolId = 'BEATPORT';
                     if (overridePoolId === 'RETRO_VAULT') {
                         trackPoolId = 'RETRO_VAULT';
-                    } else if (brand === 'DJPACKS') {
+                    } else if (brandUpper === 'DJPACKS') {
                         trackPoolId = path.includes('SOUTH AMERICA DJ PACKS') ? 'SOUTH AMERICA' : 'DJPACKS';
-                    } else if (brand === 'BEATPORT') {
+                    } else if (brandUpper === 'BEATPORT') {
                         trackPoolId = 'BEATPORT';
                     }
 
@@ -284,7 +286,7 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                 }
 
                 // INJECT CUSTOM FOLDER FOR DJPACKS ROOT
-                if (brand === 'DJPACKS' && path.length === 1) { // path is just ['DJPACKS']
+                if (brandUpper === 'DJPACKS' && path.length === 1) { // path is just ['DJPACKS']
                     folderSet.add('SOUTH AMERICA DJ PACKS');
                 }
 
@@ -316,16 +318,16 @@ const PoolGrid: React.FC<PoolGridProps> = ({ initialPool, overridePoolId }) => {
                     let trackPoolId = 'BEATPORT';
                     if (overridePoolId === 'RETRO_VAULT') {
                         trackPoolId = 'RETRO_VAULT';
-                    } else if (brand === 'DJPACKS') {
+                    } else if (brandUpper === 'DJPACKS') {
                         if (path.includes('SOUTH AMERICA DJ PACKS')) {
                             trackPoolId = 'SOUTH AMERICA';
                         } else {
                             trackPoolId = 'DJPACKS';
                         }
-                    } else if (brand === 'BEATPORT') {
+                    } else if (brandUpper === 'BEATPORT') {
                         trackPoolId = 'BEATPORT';
                     } else {
-                        trackPoolId = brand;
+                        trackPoolId = POOL_ID_MAP[brand] || brand;
                     }
 
                     // Buscar tracks con ILIKE (funciona con paths URL-encoded)
