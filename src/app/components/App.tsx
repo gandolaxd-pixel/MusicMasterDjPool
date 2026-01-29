@@ -167,7 +167,7 @@ const AppContent = () => {
 
             <Route path="packs" element={<PacksPage user={user} />} />
             <Route path="retro" element={<RetroVault />} />
-            <Route path="categories" element={<CategoriesPage realTracks={realTracks} user={user} />} />
+            <Route path="categories" element={<CategoriesPage />} />
             <Route path="history" element={<HistoryPage user={user} />} />
             <Route path="subscription" element={<SubscriptionPage user={user} />} />
 
